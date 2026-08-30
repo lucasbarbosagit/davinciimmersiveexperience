@@ -1,0 +1,48 @@
+.joaoSection {
+  height: 100vh;
+  position: relative;
+  overflow: hidden;
+}
+
+.joaoMedia {
+  position: absolute;
+  inset: 0;
+  filter: brightness(0.35);
+}
+
+.joaoScrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(6, 5, 3, 0.5) 0%,
+    rgba(6, 5, 3, 0.02) 30%,
+    rgba(6, 5, 3, 0.7) 100%
+  );
+  pointer-events: none;
+}
+
+.joaoCopy {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 9vh;
+  padding: 0 5vw;
+  z-index: 2;
+}
+
+.joaoCopy .eyebrow {
+  font-size: 12px;
+  letter-spacing: 2px;
+  color: var(--gold-soft);
+  margin-bottom: 14px;
+  display: block;
+}
+
+.joaoCopy h2 {
+  font-family: var(--font-serif), serif;
+  font-weight: 500;
+  font-size: clamp(30px, 5vw, 60px);
+  color: var(--cream);
+  max-width: 16ch;
+}
