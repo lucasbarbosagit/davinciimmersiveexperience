@@ -10,17 +10,6 @@
   will-change: transform;
 }
 
-.layer {
-  position: absolute;
-  inset: 0;
-}
-
-/* camada de cima: o estudo, só aparece dentro do furo da máscara */
-.layerStudy {
-  mask: url(#inkMask);
-  -webkit-mask: url(#inkMask);
-}
-
 .heroScrim {
   position: absolute;
   inset: 0;
@@ -41,6 +30,9 @@
   bottom: 9vh;
   padding: 0 5vw;
   z-index: 5;
+  /* é um bloco de largura total, mas só o texto à esquerda é visível —
+     sem isso a área vazia à direita rouba o hover do canvas por baixo */
+  pointer-events: none;
 }
 
 .heroCopy .eyebrow {
@@ -81,6 +73,7 @@
   font-size: 11px;
   letter-spacing: 1px;
   z-index: 5;
+  pointer-events: none;
 }
 
 .scrollCue .line {
@@ -111,6 +104,7 @@
   opacity: 0.7;
   z-index: 5;
   text-align: center;
+  pointer-events: none;
 }
 
 .floatingSlot {
