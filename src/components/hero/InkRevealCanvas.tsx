@@ -92,15 +92,20 @@ const FRAGMENT_SHADER = /* glsl */ `
     vec2 mousePx = uMouse * uResolution;
     float dist = distance(pixel, mousePx);
 
-    float grain = fbm(vUv * 9.0 + uTime * 0.06);
-    float edge = uRadius * uReveal + (grain - 0.5) * uRadius * 0.85;
-    float mask = 1.0 - smoothstep(edge - 18.0, edge + 18.0, dist);
+    // ruído calculado em espaço de PIXEL (não vUv normalizado) — é o que
+    // faz a granulação ter escala de "grão de areia" (~20px) em vez de
+    // manchas grandes e lisas do tamanho da tela inteira
+    float grain = fbm(pixel * 0.05 + vec2(uTime * 34.0, uTime * 11.0));
+    float edge = uRadius * uReveal + (grain - 0.5) * uRadius * 0.7;
+    // transição bem apertada (poucos pixels): a serrilhada vem do ruído
+    // perturbando "edge" pixel a pixel, não de um degradê largo aqui
+    float mask = 1.0 - smoothstep(edge - 2.5, edge + 2.5, dist);
 
-    // banda de respingos granulados só na borda da transição —
-    // é o que dá a sensação de "poeira" se soltando, não só uma
-    // linha de corte irregular
-    float speckle = step(0.48, fbm(vUv * 26.0 - uTime * 0.15));
-    float band = smoothstep(edge - 46.0, edge, dist) * (1.0 - smoothstep(edge, edge + 46.0, dist));
+    // banda de respingos bem finos só perto da borda da transição —
+    // é o que dá a sensação de "poeira" se soltando, não só um
+    // contorno irregular único
+    float speckle = step(0.52, fbm(pixel * 0.14 - vec2(uTime * 70.0, uTime * 45.0)));
+    float band = smoothstep(edge - 24.0, edge, dist) * (1.0 - smoothstep(edge, edge + 24.0, dist));
     mask *= mix(1.0, speckle, band);
 
     mask *= uReveal;
@@ -223,11 +228,11 @@ export default function InkRevealCanvas({
     resizeObserver.observe(container);
     resize();
 
-    const clock = new THREE.Clock();
+    const startTime = performance.now();
     function tick() {
       if (disposed) return;
       uniforms.uMouse.value.set(mouseTarget.x, mouseTarget.y);
-      uniforms.uTime.value = clock.getElapsedTime();
+      uniforms.uTime.value = (performance.now() - startTime) / 1000;
       renderer.render(scene, camera);
       rafId = requestAnimationFrame(tick);
     }

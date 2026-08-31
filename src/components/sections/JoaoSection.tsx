@@ -13,6 +13,9 @@ export default function JoaoSection() {
   useIsomorphicLayoutEffect(() => {
     const section = sectionRef.current;
     const media = mediaRef.current;
+    // getElementById, não string de seletor: gsap.context() escopa buscas
+    // por texto dentro de sectionRef, e o nav é irmão, não descendente.
+    const siteNav = document.getElementById("site-nav");
     if (!section || !media) return;
 
     const ctx = gsap.context(() => {
@@ -27,7 +30,7 @@ export default function JoaoSection() {
         },
       })
         .to(media, { scale: 1, filter: "brightness(1)", ease: "none" }, 0)
-        .to("#site-nav", { autoAlpha: 1, ease: "none" }, 0.3);
+        .to(siteNav, { autoAlpha: 1, ease: "none" }, 0.3);
     }, sectionRef);
 
     return () => ctx.revert();

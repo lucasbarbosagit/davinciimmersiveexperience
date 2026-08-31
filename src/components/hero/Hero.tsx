@@ -19,6 +19,10 @@ export default function Hero() {
   useIsomorphicLayoutEffect(() => {
     const heroPin = heroPinRef.current;
     const heroMedia = heroMediaRef.current;
+    // pego via getElementById, não string de seletor: gsap.context() escopa
+    // buscas por texto dentro de heroPinRef, e o nav é irmão dessa seção,
+    // não descendente — como string ele nunca seria encontrado.
+    const siteNav = document.getElementById("site-nav");
     if (!heroPin || !heroMedia) return;
 
     const ctx = gsap.context(() => {
@@ -60,7 +64,7 @@ export default function Hero() {
               .to(heroCopyRef.current, { autoAlpha: 0 }, 0)
               .to(hintRef.current, { autoAlpha: 0 }, 0)
               .to(scrollCueRef.current, { autoAlpha: 0 }, 0)
-              .to("#site-nav", { autoAlpha: 0 }, 0)
+              .to(siteNav, { autoAlpha: 0 }, 0)
               .to(slotRefs.current.filter(Boolean), { autoAlpha: 0 }, 0)
               .to(portalFadeRef.current, { opacity: 1 }, 0.3);
             return;
@@ -78,7 +82,7 @@ export default function Hero() {
             .to(heroCopyRef.current, { autoAlpha: 0, y: -20, ease: "none" }, 0)
             .to(hintRef.current, { autoAlpha: 0, ease: "none" }, 0)
             .to(scrollCueRef.current, { autoAlpha: 0, ease: "none" }, 0)
-            .to("#site-nav", { autoAlpha: 0, ease: "none" }, 0)
+            .to(siteNav, { autoAlpha: 0, ease: "none" }, 0)
             .to(slotRefs.current.filter(Boolean), { autoAlpha: 0, ease: "none" }, 0)
             .to(heroMedia, { scale: 18, ease: "power2.in" }, 0.15)
             .to(portalFadeRef.current, { opacity: 1, ease: "none" }, 0.75);
