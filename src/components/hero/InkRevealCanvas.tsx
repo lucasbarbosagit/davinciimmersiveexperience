@@ -57,7 +57,8 @@ const STAMP_FRAGMENT_SHADER = /* glsl */ `
   uniform vec2 uResolution;
   uniform vec2 uMouse;
   uniform float uRadius;
-  uniform float uDecay;
+  uniform float uDecayPerSecond;
+  uniform float uDt;
   uniform float uActive;
   uniform float uTime;
 
@@ -79,7 +80,13 @@ const STAMP_FRAGMENT_SHADER = /* glsl */ `
     stamp *= mix(1.0, speckle, band);
     stamp *= uActive;
 
-    float prev = texture2D(uPrevTrail, vUv).r * uDecay;
+    // decaimento por TEMPO decorrido, não por frame — um multiplicador
+    // fixo por frame fica mais lento sempre que o FPS cai (GPU fraca,
+    // tela de alta resolução, aba sem foco), o que fazia o rastro
+    // parecer travado em vez de desbotar; pow() com uDt mantém a
+    // mesma velocidade de desbotamento em segundos reais, a qualquer FPS
+    float decayFactor = pow(uDecayPerSecond, uDt);
+    float prev = texture2D(uPrevTrail, vUv).r * decayFactor;
     float trail = max(prev, stamp);
 
     gl_FragColor = vec4(trail, trail, trail, 1.0);
@@ -179,7 +186,10 @@ export default function InkRevealCanvas({
       uResolution: { value: new THREE.Vector2(1, 1) },
       uMouse: { value: new THREE.Vector2(-1, -1) },
       uRadius: { value: radius },
-      uDecay: { value: 0.965 },
+      // fração do rastro que sobra depois de 1 segundo real — a
+      // combinar com pow() no shader, então independe do FPS
+      uDecayPerSecond: { value: 0.16 },
+      uDt: { value: 0 },
       uActive: { value: 0 },
       uTime: { value: 0 },
     };
@@ -270,12 +280,20 @@ export default function InkRevealCanvas({
     resize();
 
     const startTime = performance.now();
+    let lastTime = startTime;
     function tick() {
       if (disposed) return;
-      const elapsed = (performance.now() - startTime) / 1000;
+      const now = performance.now();
+      const elapsed = (now - startTime) / 1000;
+      // cap: se a aba ficou em segundo plano e o rAF pausou por um
+      // tempo, um dt gigante faria pow(uDecayPerSecond, dt) zerar o
+      // buffer de uma vez — mais previsível que ele só continue baixo
+      const dt = Math.min((now - lastTime) / 1000, 0.25);
+      lastTime = now;
 
       stampUniforms.uMouse.value.set(mouseTarget.x, mouseTarget.y);
       stampUniforms.uTime.value = elapsed;
+      stampUniforms.uDt.value = dt;
       stampUniforms.uActive.value = active ? 1 : 0;
       stampUniforms.uPrevTrail.value = rtA.texture;
 
