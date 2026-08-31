@@ -177,7 +177,11 @@ export default function InkRevealCanvas({
     const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
     const geometry = new THREE.PlaneGeometry(2, 2);
 
-    const rtOptions = { depthBuffer: false, stencilBuffer: false };
+    // HalfFloatType, não o UnsignedByteType padrão de 8 bits: um valor
+    // baixo (ex. 15/255) decaindo por uma fração pequena a cada frame
+    // arredonda de volta pro mesmo inteiro em 8 bits — o rastro trava
+    // num platô visível em vez de chegar a zero de verdade.
+    const rtOptions = { depthBuffer: false, stencilBuffer: false, type: THREE.HalfFloatType };
     let rtA = new THREE.WebGLRenderTarget(1, 1, rtOptions);
     let rtB = new THREE.WebGLRenderTarget(1, 1, rtOptions);
 
