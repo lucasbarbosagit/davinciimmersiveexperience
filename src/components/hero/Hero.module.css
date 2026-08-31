@@ -142,7 +142,9 @@
 .portalFade {
   position: absolute;
   inset: 0;
-  background: #000;
+  /* mesmo tom azul-acinzentado do vidro da esfera, amostrado da própria
+     imagem — o "portal" continua a cor do orb em vez de cortar pra preto */
+  background: #34383c;
   opacity: 0;
   z-index: 6;
   pointer-events: none;

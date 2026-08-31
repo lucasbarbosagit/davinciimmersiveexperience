@@ -8,11 +8,11 @@ Projeto de portfólio construído pra explorar animação de alto nível (o tipo
 
 ## O que tem aqui
 
-- **Reveal com máscara de tinta** — passar o mouse (ou arrastar, no touch) sobre o retrato do *Salvator Mundi* abre um furo orgânico, distorcido por um filtro de ruído SVG (`feTurbulence` + `feDisplacementMap`), que revela o estudo de proporções por baixo da pintura finalizada.
+- **Reveal em tinta, de verdade** — passar o mouse (ou arrastar, no touch) sobre o retrato do *Salvator Mundi* pinta um rastro que revela o estudo de proporções por baixo. Não é uma máscara circular: é um shader WebGL próprio (Three.js), com um buffer de acumulação ping-pong que registra o trajeto do cursor — passar rápido deixa um risco fino, "de tinta jogada"; passar devagar preenche um borrão grosso — e o rastro decai sozinho, de forma suave e independente do frame rate, até sumir.
 - **Zoom de câmera pinado** — o scroll mergulha a câmera exatamente no orbe de cristal que Cristo segura, com `transform-origin` calibrado na posição real da imagem, não num ponto genérico da tela.
-- **Transição de portal** — o mergulho termina em fade e emerge na cena seguinte, o *São João Batista*, como um corte de cena, não um scroll comum entre seções.
+- **Transição por cor, não por corte** — o mergulho no orbe termina no mesmo azul-acinzentado do vidro (amostrado por pixel da própria imagem) e a cena seguinte, o *Batismo de Cristo*, entra já enquadrada num trecho limpo do céu na mesma paleta — a pintura "acorda" dessa cor conforme a câmera se afasta e revela a cena inteira.
 
-![São João Batista](.github/readme/preview-joao.png)
+![Batismo de Cristo](.github/readme/preview-batismo.png)
 
 - **Acessibilidade de verdade, não checkbox** — quem tem `prefers-reduced-motion` ativado recebe uma transição em crossfade simples no lugar do zoom de 18x, via `gsap.matchMedia()`. O efeito de assinatura não é obrigatório pra navegar o site.
 
@@ -22,8 +22,9 @@ Projeto de portfólio construído pra explorar animação de alto nível (o tipo
 |---|---|
 | Framework | [Next.js 16](https://nextjs.org) (App Router) + TypeScript |
 | Animação | [GSAP](https://gsap.com) + ScrollTrigger |
+| Reveal em tinta | [Three.js](https://threejs.org) — shader GLSL próprio, buffer de acumulação em ping-pong |
 | Smooth scroll | [Lenis](https://lenis.darkroom.engineering), sincronizado ao ticker do GSAP |
-| Estilo | Tailwind CSS v4 para layout, CSS Modules para os efeitos (máscaras, filtros, gradientes) |
+| Estilo | Tailwind CSS v4 para layout, CSS Modules para os efeitos (filtros, gradientes, blends) |
 | Imagens | `next/image` |
 | Fontes | `next/font/google` (Cormorant Garamond + Inter) |
 
@@ -45,7 +46,7 @@ src/
   app/                    # rotas (App Router)
   components/
     nav/                  # navegação fixa, mix-blend-mode: difference
-    hero/                 # seção do Salvator Mundi — máscara, zoom, portal
+    hero/                 # seção do Salvator Mundi — reveal em tinta (WebGL), zoom, portal
     sections/             # demais obras da jornada
     SmoothScroll.tsx       # ponte entre Lenis e o ScrollTrigger do GSAP
   hooks/
@@ -56,4 +57,4 @@ src/
 
 ## Status
 
-Em construção. A jornada atual cobre o *Salvator Mundi* → *São João Batista*. Próxima obra e os objetos decorativos flutuantes (as caixas tracejadas no hero) ainda entram.
+Em construção. A jornada atual cobre o *Salvator Mundi* → *Batismo de Cristo*. Próxima obra e os objetos decorativos flutuantes (as caixas tracejadas no hero) ainda entram.

@@ -1,16 +1,27 @@
-.joaoSection {
+.batismoSection {
   height: 100vh;
   position: relative;
   overflow: hidden;
 }
 
-.joaoMedia {
+.batismoMedia {
   position: absolute;
   inset: 0;
-  filter: brightness(0.35);
+  will-change: transform, filter;
 }
 
-.joaoScrim {
+.batismoTint {
+  position: absolute;
+  inset: 0;
+  /* mesmo azul-acinzentado do portalFade da hero — funde por cima da
+     pintura via mix-blend-mode em vez de hue-rotate, senão os raios
+     dourados viram verde-água */
+  background: #34383c;
+  mix-blend-mode: color;
+  pointer-events: none;
+}
+
+.batismoScrim {
   position: absolute;
   inset: 0;
   background: linear-gradient(
@@ -22,7 +33,7 @@
   pointer-events: none;
 }
 
-.joaoCopy {
+.batismoCopy {
   position: absolute;
   left: 0;
   right: 0;
@@ -31,7 +42,7 @@
   z-index: 2;
 }
 
-.joaoCopy .eyebrow {
+.batismoCopy .eyebrow {
   font-size: 12px;
   letter-spacing: 2px;
   color: var(--gold-soft);
@@ -39,7 +50,7 @@
   display: block;
 }
 
-.joaoCopy h2 {
+.batismoCopy h2 {
   font-family: var(--font-serif), serif;
   font-weight: 500;
   font-size: clamp(30px, 5vw, 60px);

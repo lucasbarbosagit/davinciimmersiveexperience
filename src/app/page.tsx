@@ -1,6 +1,6 @@
 import Nav from "@/components/nav/Nav";
 import Hero from "@/components/hero/Hero";
-import JoaoSection from "@/components/sections/JoaoSection";
+import BatismoSection from "@/components/sections/BatismoSection";
 
 export default function Home() {
   return (
@@ -8,7 +8,7 @@ export default function Home() {
       <Nav />
       <main>
         <Hero />
-        <JoaoSection />
+        <BatismoSection />
       </main>
     </>
   );
