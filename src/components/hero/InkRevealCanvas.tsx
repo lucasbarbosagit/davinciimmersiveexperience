@@ -95,8 +95,12 @@ const FRAGMENT_SHADER = /* glsl */ `
     // ruído calculado em espaço de PIXEL (não vUv normalizado) — é o que
     // faz a granulação ter escala de "grão de areia" (~20px) em vez de
     // manchas grandes e lisas do tamanho da tela inteira
-    float grain = fbm(pixel * 0.05 + vec2(uTime * 34.0, uTime * 11.0));
-    float edge = uRadius * uReveal + (grain - 0.5) * uRadius * 0.7;
+    float grain = fbm(pixel * 0.07 + vec2(uTime * 34.0, uTime * 11.0));
+    // amplitude bem menor: a 0.7 anterior deixava a fbm produzir uns
+    // poucos picos grandes e pontudos (leu como "chama"); com isso a
+    // silhueta fica arredondada/pintura, e quem dá a granulação fina
+    // é a banda de speckle abaixo, não essa perturbação grande
+    float edge = uRadius * uReveal + (grain - 0.5) * uRadius * 0.22;
     // transição bem apertada (poucos pixels): a serrilhada vem do ruído
     // perturbando "edge" pixel a pixel, não de um degradê largo aqui
     float mask = 1.0 - smoothstep(edge - 2.5, edge + 2.5, dist);
