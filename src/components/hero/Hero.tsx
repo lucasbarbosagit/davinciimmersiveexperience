@@ -102,7 +102,7 @@ export default function Hero() {
           baseSrc="/assets/salvator-mundi.jpg"
           revealSrc="/assets/estudo-salvator.jpg"
           focal={{ x: 0.5, y: 0.22 }}
-          radius={200}
+          radius={130}
         />
         <div className={styles.heroScrim} />
       </div>

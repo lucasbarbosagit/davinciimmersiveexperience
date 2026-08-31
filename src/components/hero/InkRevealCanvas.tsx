@@ -13,35 +13,10 @@ const VERTEX_SHADER = /* glsl */ `
   }
 `;
 
-// ruído hash/fbm genérico — sem ele o corte da revelação seria um
-// círculo perfeito; com ele, cada pixel da borda decide "por conta
-// própria" se fica dentro ou fora, dando aquela textura granulada
-// (em vez de uma borda lisa e uniforme) que aparece em movimento.
-const FRAGMENT_SHADER = /* glsl */ `
-  precision highp float;
-
-  uniform sampler2D uTexA;
-  uniform sampler2D uTexB;
-  uniform vec2 uResolution;
-  uniform vec2 uTexASize;
-  uniform vec2 uTexBSize;
-  uniform vec2 uFocal;
-  uniform vec2 uMouse;
-  uniform float uRadius;
-  uniform float uReveal;
-  uniform float uTime;
-
-  varying vec2 vUv;
-
-  // ShaderMaterial cru não recebe a codificação linear->sRGB automática
-  // que o Three.js aplica nos materiais embutidos — sem isso a imagem
-  // sai mais escura e puxada pro vermelho do que a textura original.
-  vec3 linearToSRGB(vec3 color) {
-    vec3 low = color * 12.92;
-    vec3 high = 1.055 * pow(color, vec3(1.0 / 2.4)) - 0.055;
-    return mix(low, high, step(0.0031308, color));
-  }
-
+// ruído hash/fbm genérico, compartilhado pelos dois shaders abaixo —
+// dá a cada pixel da borda uma "opinião própria" sobre ficar dentro
+// ou fora, em vez de um corte geométrico perfeito.
+const NOISE_GLSL = /* glsl */ `
   float hash(vec2 p) {
     return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
   }
@@ -67,6 +42,73 @@ const FRAGMENT_SHADER = /* glsl */ `
     }
     return value;
   }
+`;
+
+// PASSO 1 — carimba uma mancha de tinta na posição atual do ponteiro
+// por cima do buffer do frame anterior (já desbotado), e guarda o
+// resultado. É essa persistência entre frames que faz o rastro
+// existir: se o mouse anda rápido, os carimbos de frames consecutivos
+// ficam espalhados (risco fino); se anda devagar, eles se sobrepõem
+// muito (mancha grossa) — o mesmo mecanismo produz os dois efeitos.
+const STAMP_FRAGMENT_SHADER = /* glsl */ `
+  precision highp float;
+
+  uniform sampler2D uPrevTrail;
+  uniform vec2 uResolution;
+  uniform vec2 uMouse;
+  uniform float uRadius;
+  uniform float uDecay;
+  uniform float uActive;
+  uniform float uTime;
+
+  varying vec2 vUv;
+
+  ${NOISE_GLSL}
+
+  void main() {
+    vec2 pixel = vUv * uResolution;
+    vec2 mousePx = uMouse * uResolution;
+    float dist = distance(pixel, mousePx);
+
+    float grain = fbm(pixel * 0.07 + vec2(uTime * 34.0, uTime * 11.0));
+    float edge = uRadius + (grain - 0.5) * uRadius * 0.22;
+    float stamp = 1.0 - smoothstep(edge - 2.5, edge + 2.5, dist);
+
+    float speckle = step(0.52, fbm(pixel * 0.14 - vec2(uTime * 70.0, uTime * 45.0)));
+    float band = smoothstep(edge - 24.0, edge, dist) * (1.0 - smoothstep(edge, edge + 24.0, dist));
+    stamp *= mix(1.0, speckle, band);
+    stamp *= uActive;
+
+    float prev = texture2D(uPrevTrail, vUv).r * uDecay;
+    float trail = max(prev, stamp);
+
+    gl_FragColor = vec4(trail, trail, trail, 1.0);
+  }
+`;
+
+// PASSO 2 — usa o buffer acumulado (não a posição do ponteiro) como
+// máscara de mistura entre a pintura finalizada e o estudo.
+const COMPOSE_FRAGMENT_SHADER = /* glsl */ `
+  precision highp float;
+
+  uniform sampler2D uTexA;
+  uniform sampler2D uTexB;
+  uniform sampler2D uTrail;
+  uniform vec2 uResolution;
+  uniform vec2 uTexASize;
+  uniform vec2 uTexBSize;
+  uniform vec2 uFocal;
+
+  varying vec2 vUv;
+
+  // ShaderMaterial cru não recebe a codificação linear->sRGB automática
+  // que o Three.js aplica nos materiais embutidos — sem isso a imagem
+  // sai mais escura e puxada pro vermelho do que a textura original.
+  vec3 linearToSRGB(vec3 color) {
+    vec3 low = color * 12.92;
+    vec3 high = 1.055 * pow(color, vec3(1.0 / 2.4)) - 0.055;
+    return mix(low, high, step(0.0031308, color));
+  }
 
   // mapeia vUv como um "background-size: cover" com foco em uFocal,
   // igual ao object-position que a imagem usava antes em CSS puro
@@ -87,32 +129,7 @@ const FRAGMENT_SHADER = /* glsl */ `
     vec2 uvB = coverUv(vUv, uTexBSize, uFocal);
     vec4 colA = texture2D(uTexA, uvA);
     vec4 colB = texture2D(uTexB, uvB);
-
-    vec2 pixel = vUv * uResolution;
-    vec2 mousePx = uMouse * uResolution;
-    float dist = distance(pixel, mousePx);
-
-    // ruído calculado em espaço de PIXEL (não vUv normalizado) — é o que
-    // faz a granulação ter escala de "grão de areia" (~20px) em vez de
-    // manchas grandes e lisas do tamanho da tela inteira
-    float grain = fbm(pixel * 0.07 + vec2(uTime * 34.0, uTime * 11.0));
-    // amplitude bem menor: a 0.7 anterior deixava a fbm produzir uns
-    // poucos picos grandes e pontudos (leu como "chama"); com isso a
-    // silhueta fica arredondada/pintura, e quem dá a granulação fina
-    // é a banda de speckle abaixo, não essa perturbação grande
-    float edge = uRadius * uReveal + (grain - 0.5) * uRadius * 0.22;
-    // transição bem apertada (poucos pixels): a serrilhada vem do ruído
-    // perturbando "edge" pixel a pixel, não de um degradê largo aqui
-    float mask = 1.0 - smoothstep(edge - 2.5, edge + 2.5, dist);
-
-    // banda de respingos bem finos só perto da borda da transição —
-    // é o que dá a sensação de "poeira" se soltando, não só um
-    // contorno irregular único
-    float speckle = step(0.52, fbm(pixel * 0.14 - vec2(uTime * 70.0, uTime * 45.0)));
-    float band = smoothstep(edge - 24.0, edge, dist) * (1.0 - smoothstep(edge, edge + 24.0, dist));
-    mask *= mix(1.0, speckle, band);
-
-    mask *= uReveal;
+    float mask = texture2D(uTrail, vUv).r;
 
     vec3 finalColor = mix(colA.rgb, colB.rgb, clamp(mask, 0.0, 1.0));
     gl_FragColor = vec4(linearToSRGB(finalColor), 1.0);
@@ -130,7 +147,7 @@ export default function InkRevealCanvas({
   baseSrc,
   revealSrc,
   focal = { x: 0.5, y: 0.22 },
-  radius = 200,
+  radius = 130,
 }: InkRevealCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const prefersReducedMotion = usePrefersReducedMotion();
@@ -150,21 +167,46 @@ export default function InkRevealCanvas({
     renderer.domElement.style.height = "100%";
     renderer.domElement.style.display = "block";
 
-    const scene = new THREE.Scene();
     const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+    const geometry = new THREE.PlaneGeometry(2, 2);
 
-    const uniforms = {
+    const rtOptions = { depthBuffer: false, stencilBuffer: false };
+    let rtA = new THREE.WebGLRenderTarget(1, 1, rtOptions);
+    let rtB = new THREE.WebGLRenderTarget(1, 1, rtOptions);
+
+    const stampUniforms = {
+      uPrevTrail: { value: rtA.texture },
+      uResolution: { value: new THREE.Vector2(1, 1) },
+      uMouse: { value: new THREE.Vector2(-1, -1) },
+      uRadius: { value: radius },
+      uDecay: { value: 0.965 },
+      uActive: { value: 0 },
+      uTime: { value: 0 },
+    };
+    const stampMaterial = new THREE.ShaderMaterial({
+      uniforms: stampUniforms,
+      vertexShader: VERTEX_SHADER,
+      fragmentShader: STAMP_FRAGMENT_SHADER,
+    });
+    const stampScene = new THREE.Scene();
+    stampScene.add(new THREE.Mesh(geometry, stampMaterial));
+
+    const composeUniforms = {
       uTexA: { value: null as THREE.Texture | null },
       uTexB: { value: null as THREE.Texture | null },
+      uTrail: { value: rtB.texture },
       uResolution: { value: new THREE.Vector2(1, 1) },
       uTexASize: { value: new THREE.Vector2(1, 1) },
       uTexBSize: { value: new THREE.Vector2(1, 1) },
       uFocal: { value: new THREE.Vector2(focal.x, focal.y) },
-      uMouse: { value: new THREE.Vector2(-1, -1) },
-      uRadius: { value: radius },
-      uReveal: { value: 0 },
-      uTime: { value: 0 },
     };
+    const composeMaterial = new THREE.ShaderMaterial({
+      uniforms: composeUniforms,
+      vertexShader: VERTEX_SHADER,
+      fragmentShader: COMPOSE_FRAGMENT_SHADER,
+    });
+    const composeScene = new THREE.Scene();
+    composeScene.add(new THREE.Mesh(geometry, composeMaterial));
 
     const loader = new THREE.TextureLoader();
     const loadInto = (src: string, texUniform: { value: THREE.Texture | null }, sizeUniform: THREE.Vector2) =>
@@ -174,29 +216,28 @@ export default function InkRevealCanvas({
         if (img?.width && img?.height) sizeUniform.set(img.width, img.height);
         texUniform.value = tex;
       });
-    const texA = loadInto(baseSrc, uniforms.uTexA, uniforms.uTexASize.value);
-    const texB = loadInto(revealSrc, uniforms.uTexB, uniforms.uTexBSize.value);
+    const texA = loadInto(baseSrc, composeUniforms.uTexA, composeUniforms.uTexASize.value);
+    const texB = loadInto(revealSrc, composeUniforms.uTexB, composeUniforms.uTexBSize.value);
 
-    const geometry = new THREE.PlaneGeometry(2, 2);
-    const material = new THREE.ShaderMaterial({
-      uniforms,
-      vertexShader: VERTEX_SHADER,
-      fragmentShader: FRAGMENT_SHADER,
-    });
-    const mesh = new THREE.Mesh(geometry, material);
-    scene.add(mesh);
-
+    // suavização leve só pra não perder carimbos entre eventos de
+    // pointermove esparsos — o rastro em si vem da persistência do
+    // buffer, não dessa perseguição
     const mouseTarget = { x: 0.5, y: 0.22 };
-    const followX = gsap.quickTo(mouseTarget, "x", { duration: 0.32, ease: "power3" });
-    const followY = gsap.quickTo(mouseTarget, "y", { duration: 0.32, ease: "power3" });
+    const followX = gsap.quickTo(mouseTarget, "x", { duration: 0.1, ease: "power2" });
+    const followY = gsap.quickTo(mouseTarget, "y", { duration: 0.1, ease: "power2" });
 
-    let revealed = false;
+    let active = false;
 
     function resize() {
       if (!container) return;
-      const { clientWidth: w, clientHeight: h } = container;
-      renderer.setSize(w, h, false);
-      uniforms.uResolution.value.set(w, h);
+      const dpr = renderer.getPixelRatio();
+      const w = Math.max(1, Math.round(container.clientWidth * dpr));
+      const h = Math.max(1, Math.round(container.clientHeight * dpr));
+      renderer.setSize(container.clientWidth, container.clientHeight, false);
+      rtA.setSize(w, h);
+      rtB.setSize(w, h);
+      stampUniforms.uResolution.value.set(w, h);
+      composeUniforms.uResolution.value.set(w, h);
     }
 
     function setPointer(clientX: number, clientY: number) {
@@ -205,15 +246,11 @@ export default function InkRevealCanvas({
       const y = 1 - (clientY - rect.top) / rect.height;
       followX(x);
       followY(y);
-      if (!revealed) {
-        revealed = true;
-        gsap.to(uniforms.uReveal, { value: 1, duration: 0.6, ease: "back.out(1.5)" });
-      }
+      active = true;
     }
 
-    function hidePointer() {
-      revealed = false;
-      gsap.to(uniforms.uReveal, { value: 0, duration: 0.5, ease: "power2.in" });
+    function clearPointer() {
+      active = false;
     }
 
     const onPointerMove = (e: PointerEvent) => setPointer(e.clientX, e.clientY);
@@ -223,10 +260,10 @@ export default function InkRevealCanvas({
     };
 
     container.addEventListener("pointermove", onPointerMove);
-    container.addEventListener("pointerleave", hidePointer);
+    container.addEventListener("pointerleave", clearPointer);
     container.addEventListener("touchmove", onTouchMove, { passive: true });
-    container.addEventListener("touchend", hidePointer);
-    container.addEventListener("touchcancel", hidePointer);
+    container.addEventListener("touchend", clearPointer);
+    container.addEventListener("touchcancel", clearPointer);
 
     const resizeObserver = new ResizeObserver(resize);
     resizeObserver.observe(container);
@@ -235,9 +272,24 @@ export default function InkRevealCanvas({
     const startTime = performance.now();
     function tick() {
       if (disposed) return;
-      uniforms.uMouse.value.set(mouseTarget.x, mouseTarget.y);
-      uniforms.uTime.value = (performance.now() - startTime) / 1000;
-      renderer.render(scene, camera);
+      const elapsed = (performance.now() - startTime) / 1000;
+
+      stampUniforms.uMouse.value.set(mouseTarget.x, mouseTarget.y);
+      stampUniforms.uTime.value = elapsed;
+      stampUniforms.uActive.value = active ? 1 : 0;
+      stampUniforms.uPrevTrail.value = rtA.texture;
+
+      renderer.setRenderTarget(rtB);
+      renderer.render(stampScene, camera);
+      renderer.setRenderTarget(null);
+
+      composeUniforms.uTrail.value = rtB.texture;
+      renderer.render(composeScene, camera);
+
+      const swap = rtA;
+      rtA = rtB;
+      rtB = swap;
+
       rafId = requestAnimationFrame(tick);
     }
     tick();
@@ -247,12 +299,15 @@ export default function InkRevealCanvas({
       cancelAnimationFrame(rafId);
       resizeObserver.disconnect();
       container.removeEventListener("pointermove", onPointerMove);
-      container.removeEventListener("pointerleave", hidePointer);
+      container.removeEventListener("pointerleave", clearPointer);
       container.removeEventListener("touchmove", onTouchMove);
-      container.removeEventListener("touchend", hidePointer);
-      container.removeEventListener("touchcancel", hidePointer);
+      container.removeEventListener("touchend", clearPointer);
+      container.removeEventListener("touchcancel", clearPointer);
       geometry.dispose();
-      material.dispose();
+      stampMaterial.dispose();
+      composeMaterial.dispose();
+      rtA.dispose();
+      rtB.dispose();
       texA.dispose();
       texB.dispose();
       renderer.dispose();
