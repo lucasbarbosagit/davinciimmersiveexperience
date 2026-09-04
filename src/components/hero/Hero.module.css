@@ -10,6 +10,71 @@
   will-change: transform;
 }
 
+.orbGlow {
+  /* chamativo antes do scroll: halo dourado pulsante ao redor da bola,
+     pra puxar o olhar pra ela antes do usuário rolar — GSAP controla
+     opacity/scale (infinite yoyo), sem @keyframes CSS pra não brigar
+     com o fade-out que o timeline de scroll dá nele depois */
+  position: absolute;
+  left: 64.24%;
+  top: 88.89%;
+  width: 30vh;
+  height: 30vh;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(201, 162, 75, 0.6) 0%, rgba(201, 162, 75, 0.22) 42%, rgba(201, 162, 75, 0) 72%);
+  mix-blend-mode: screen;
+  pointer-events: none;
+}
+
+.portalReveal {
+  /* a janela do portal em si: só o clip-path (definido via GSAP, raio
+     crescendo em sincronia com o zoom de heroMedia) decide quanto dela
+     é visível. Fica FORA de heroMedia — não herda o scale de 18x — pois
+     o próprio raio do clip-path já cresce nessa mesma proporção */
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.portalRevealMedia {
+  /* o quadro em repouso da BatismoSection: mesmo arquivo, mesmo recorte
+     (object-position 50%/15%, cover), sem zoom nem tint — porque quando o
+     pin do Hero solta, a BatismoSection real já terminou sua própria
+     animação de entrada (que roda escondida atrás do pin) e está nesse
+     estado final. Mostrar isso desde já, só através de uma janela menor,
+     é o que faz a janela crescer sem costura até virar a própria seção */
+  position: absolute;
+  inset: 0;
+}
+
+.portalRevealCopy {
+  /* mesmo texto/posição de .batismoCopy (BatismoSection.module.css) —
+     revelado junto pela mesma janela, pra "dentro da bola" já ser o
+     quadro seguinte completo, com o texto dele, não só a imagem */
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 9vh;
+  padding: 0 5vw;
+}
+
+.portalRevealEyebrow {
+  font-size: 12px;
+  letter-spacing: 2px;
+  color: var(--gold-soft);
+  margin-bottom: 14px;
+  display: block;
+}
+
+.portalRevealCopy h2 {
+  font-family: var(--font-serif), serif;
+  font-weight: 500;
+  font-size: clamp(30px, 5vw, 60px);
+  color: var(--cream);
+  max-width: 16ch;
+}
+
 .heroScrim {
   position: absolute;
   inset: 0;

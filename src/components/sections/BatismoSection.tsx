@@ -33,15 +33,20 @@ export default function BatismoSection() {
       });
       gsap.set(tint, { opacity: 0.85 });
 
-      gsap.timeline({
-        scrollTrigger: {
-          trigger: section,
-          start: "top bottom",
-          end: "top top",
-          scrub: true,
-        },
-      })
-        .to(media, { scale: 1, filter: "brightness(1) saturate(1)", ease: "none" }, 0)
+      gsap
+        .timeline({
+          scrollTrigger: {
+            trigger: section,
+            start: "top bottom",
+            end: "top top",
+            scrub: true,
+          },
+        })
+        .to(
+          media,
+          { scale: 1, filter: "brightness(1) saturate(1)", ease: "none" },
+          0,
+        )
         .to(tint, { opacity: 0, ease: "none" }, 0)
         .to(siteNav, { autoAlpha: 1, ease: "none" }, 0.3);
     }, sectionRef);
@@ -53,7 +58,7 @@ export default function BatismoSection() {
     <section className={styles.batismoSection} id="batismo" ref={sectionRef}>
       <div className={styles.batismoMedia} ref={mediaRef}>
         <Image
-          src="/assets/batismo-cristo.png"
+          src="/assets/batismo-cristo.jpg"
           alt="Batismo de Cristo, de Andrea del Verrocchio e Leonardo da Vinci"
           fill
           sizes="100vw"

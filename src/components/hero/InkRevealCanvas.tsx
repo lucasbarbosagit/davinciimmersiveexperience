@@ -337,7 +337,14 @@ export default function InkRevealCanvas({
         container.removeChild(renderer.domElement);
       }
     };
-  }, [baseSrc, revealSrc, focal.x, focal.y, radius, prefersReducedMotion]);
+  }, [
+    baseSrc,
+    revealSrc,
+    focal.x,
+    focal.y,
+    radius,
+    prefersReducedMotion,
+  ]);
 
   if (prefersReducedMotion) {
     return (
