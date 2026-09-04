@@ -6,11 +6,13 @@ import { gsap } from "@/lib/gsap";
 import { useIsomorphicLayoutEffect } from "@/hooks/useIsomorphicLayoutEffect";
 import ObjectSlot from "./ObjectSlot";
 import InkRevealCanvas from "./InkRevealCanvas";
+import GoldDust from "./GoldDust";
 import styles from "./Hero.module.css";
 
 export default function Hero() {
   const heroPinRef = useRef<HTMLElement>(null);
   const heroMediaRef = useRef<HTMLDivElement>(null);
+  const goldDustRef = useRef<HTMLDivElement>(null);
   const heroCopyRef = useRef<HTMLDivElement>(null);
   const hintRef = useRef<HTMLParagraphElement>(null);
   const scrollCueRef = useRef<HTMLDivElement>(null);
@@ -52,8 +54,15 @@ export default function Hero() {
       // 0 imediatamente ao montar (z=1) mesmo sem o usuário ter rolado
       const ORB_CENTER = "64.24% 88.89%";
       const ORB_BASE_RADIUS_VH = 10.555;
+      // além do raio 0, o portal nasce invisível e desfocado: a janela
+      // (clip-path) acompanha a bola desde o primeiro tick, mas o quadro
+      // dentro dela só se MATERIALIZA no meio do mergulho (opacity/blur
+      // animados no timeline) — sem isso o Batismo aparecia inteiro,
+      // nítido, no primeiro pixel de scroll
       gsap.set(portalRevealRef.current, {
         clipPath: `circle(0vh at ${ORB_CENTER})`,
+        opacity: 0,
+        filter: "blur(14px)",
       });
       const zoomState = { z: 1 };
 
@@ -74,8 +83,24 @@ export default function Hero() {
         repeat: -1,
       });
       // scrub timelines renderizam a posição 0 imediatamente ao montar —
-      // matar o glow ali dentro do próprio timeline apagava o pulso antes
+      // mexer no glow ali dentro do próprio timeline apagava o pulso antes
       // do usuário sequer rolar. onUpdate só dispara com progresso real.
+      // No caminho normal o pulso é só PAUSADO (o timeline de scroll assume
+      // o glow: incandesce junto com o começo do mergulho e some engolido
+      // por ele); voltar ao topo retoma o pulso de onde parou.
+      let glowPulsePaused = false;
+      const pauseGlowPulse = () => {
+        if (glowPulsePaused) return;
+        glowPulsePaused = true;
+        orbGlowTween.pause();
+      };
+      const resumeGlowPulse = () => {
+        if (!glowPulsePaused) return;
+        glowPulsePaused = false;
+        orbGlowTween.resume();
+      };
+      // no caminho reduced não há mergulho pra assumir o glow — lá ele
+      // simplesmente morre com fade no primeiro scroll, como antes
       let glowKilled = false;
       const killOrbGlow = () => {
         if (glowKilled) return;
@@ -87,16 +112,6 @@ export default function Hero() {
           ease: "none",
         });
       };
-
-      // flutuação suave dos objetos ao lado
-      gsap.to(slotRefs.current.filter(Boolean), {
-        y: "+=14",
-        duration: 2.6,
-        ease: "sine.inOut",
-        yoyo: true,
-        repeat: -1,
-        stagger: 0.4,
-      });
 
       // respeita quem pede menos movimento: troca o mergulho de câmera
       // por um crossfade simples, sem o zoom de 18x nem o pin longo
@@ -133,6 +148,48 @@ export default function Hero() {
             return;
           }
 
+          // flutuação suave dos objetos ao lado — yPercent, não y, porque
+          // o y em px pertence ao parallax de mouse abaixo (propriedades
+          // distintas compõem; as duas no mesmo y brigariam a cada frame)
+          const slotEls = slotRefs.current.filter(
+            (el): el is HTMLDivElement => Boolean(el),
+          );
+          gsap.to(slotEls, {
+            yPercent: 15,
+            duration: 2.6,
+            ease: "sine.inOut",
+            yoyo: true,
+            repeat: -1,
+            stagger: 0.4,
+          });
+
+          // parallax de mouse: cada objeto numa "profundidade" própria, o
+          // quadro num contra-movimento sutil — desligado assim que o
+          // mergulho começa, porque deslocar heroMedia em px tiraria a
+          // bola de baixo da janela do portal calibrada em %
+          const parallaxSlots = slotEls.map((el, i) => ({
+            x: gsap.quickTo(el, "x", { duration: 0.8, ease: "power3" }),
+            y: gsap.quickTo(el, "y", { duration: 0.8, ease: "power3" }),
+            r: gsap.quickTo(el, "rotation", { duration: 1.2, ease: "power3" }),
+            depth: i === 0 ? 24 : 36,
+          }));
+          const mediaX = gsap.quickTo(heroMedia, "x", { duration: 1, ease: "power3" });
+          const mediaY = gsap.quickTo(heroMedia, "y", { duration: 1, ease: "power3" });
+          let parallaxOn = true;
+          const onHeroPointerMove = (e: PointerEvent) => {
+            if (!parallaxOn) return;
+            const nx = (e.clientX / window.innerWidth) * 2 - 1;
+            const ny = (e.clientY / window.innerHeight) * 2 - 1;
+            for (const p of parallaxSlots) {
+              p.x(nx * p.depth);
+              p.y(ny * p.depth * 0.7);
+              p.r(nx * 2.5);
+            }
+            mediaX(nx * -7);
+            mediaY(ny * -5);
+          };
+          heroPin.addEventListener("pointermove", onHeroPointerMove);
+
           gsap
             .timeline({
               scrollTrigger: {
@@ -142,28 +199,43 @@ export default function Hero() {
                 scrub: true,
                 pin: true,
                 onUpdate: (self) => {
-                  if (self.progress > 0.001) killOrbGlow();
+                  if (self.progress > 0.001) {
+                    pauseGlowPulse();
+                    if (parallaxOn) {
+                      parallaxOn = false;
+                      mediaX(0);
+                      mediaY(0);
+                    }
+                  } else {
+                    resumeGlowPulse();
+                    parallaxOn = true;
+                  }
                 },
               },
             })
-            .to(heroCopyRef.current, { autoAlpha: 0, y: -20, ease: "none" }, 0)
-            .to(hintRef.current, { autoAlpha: 0, ease: "none" }, 0)
-            .to(scrollCueRef.current, { autoAlpha: 0, ease: "none" }, 0)
-            .to(siteNav, { autoAlpha: 0, ease: "none" }, 0)
-            .to(
-              slotRefs.current.filter(Boolean),
-              { autoAlpha: 0, ease: "none" },
-              0,
-            )
-            // um único valor de zoom dirige tanto o mergulho na pintura
-            // quanto o raio da janela do portal — mesma curva de easing
-            // pros dois, então a borda da janela nunca desalinha da bola
-            // de vidro que está sendo desenhada por baixo
+            // ATO 1 (0 → 0.3): a moldura esvazia — texto, dicas, nav,
+            // objetos e poeira saem antes da parte violenta do zoom
+            .to(heroCopyRef.current, { autoAlpha: 0, y: -20, ease: "none", duration: 0.3 }, 0)
+            .to(hintRef.current, { autoAlpha: 0, ease: "none", duration: 0.3 }, 0)
+            .to(scrollCueRef.current, { autoAlpha: 0, ease: "none", duration: 0.3 }, 0)
+            .to(siteNav, { autoAlpha: 0, ease: "none", duration: 0.3 }, 0)
+            .to(slotEls, { autoAlpha: 0, ease: "none", duration: 0.3 }, 0)
+            .to(goldDustRef.current, { autoAlpha: 0, ease: "none", duration: 0.3 }, 0)
+            // o glow incandesce com o início do zoom (ele mora dentro de
+            // heroMedia, então cresce junto com o scale) e é engolido
+            // pelo mergulho logo depois
+            .to(orbGlowRef.current, { opacity: 1, ease: "none", duration: 0.15 }, 0.15)
+            .to(orbGlowRef.current, { opacity: 0, ease: "none", duration: 0.2 }, 0.3)
+            // ATO 2 (0.15 → 1): um único valor de zoom dirige tanto o
+            // mergulho na pintura quanto o raio da janela do portal —
+            // mesma curva de easing pros dois, então a borda da janela
+            // nunca desalinha da bola de vidro desenhada por baixo
             .to(
               zoomState,
               {
                 z: 18,
                 ease: "power2.in",
+                duration: 0.85,
                 onUpdate: () => {
                   gsap.set(heroMedia, { scale: zoomState.z });
                   const started = zoomState.z > 1.0005;
@@ -175,7 +247,25 @@ export default function Hero() {
                 },
               },
               0.15,
-            );
+            )
+            // ATO 3 (0.35 → 0.7): o Batismo se materializa DENTRO do
+            // cristal — de invisível e desfocado a nítido, em vez de já
+            // estar colado na janela desde o primeiro tick
+            .to(
+              portalRevealRef.current,
+              { opacity: 1, filter: "blur(0px)", ease: "none", duration: 0.35 },
+              0.35,
+            )
+            // ATO 4 (0.5 → 1): a passagem pela cor do vidro — o véu
+            // azul-acinzentado (#34383c, amostrado da esfera) sobe no meio
+            // do mergulho e se dissolve exatamente quando o pin solta,
+            // resolvendo no céu do Batismo, que está na mesma paleta
+            .to(portalFadeRef.current, { opacity: 0.55, ease: "none", duration: 0.2 }, 0.5)
+            .to(portalFadeRef.current, { opacity: 0, ease: "none", duration: 0.3 }, 0.7);
+
+          return () => {
+            heroPin.removeEventListener("pointermove", onHeroPointerMove);
+          };
         },
       );
 
@@ -200,6 +290,13 @@ export default function Hero() {
           zoom inteiro em preto — foi exatamente o que aconteceu quando
           morava dentro de heroMedia) */}
       <div className={styles.heroScrim} />
+
+      {/* poeira dourada suspensa na luz — o wrapper existe pro timeline
+          de scroll ter um alvo estável pra esconder (o canvas em si some
+          sozinho sob prefers-reduced-motion) */}
+      <div className={styles.goldDust} ref={goldDustRef} role="presentation">
+        <GoldDust />
+      </div>
 
       {/* janela do portal: clip-path circle crescendo sobre o quadro em
           repouso da BatismoSection (mesmo arquivo, mesmo recorte, mesmo

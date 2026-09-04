@@ -187,7 +187,10 @@
   width: 100%;
   height: 100%;
   object-fit: contain;
-  mix-blend-mode: screen;
+  /* os PNGs têm alpha real (derivado da luminância sobre fundo preto),
+     então nada de mix-blend-mode: screen — ele lavava o cartão de
+     pergaminho; o drop-shadow dá o halo de vitrine de museu */
+  filter: drop-shadow(0 0 18px rgba(201, 162, 75, 0.28));
 }
 
 .slotLabel {
@@ -202,6 +205,16 @@
   line-height: 1.4;
   color: var(--gold-soft);
   padding: 8px;
+}
+
+.goldDust {
+  /* poeira dourada entre o quadro e o texto: acima de media/scrim (z 0),
+     abaixo de heroCopy (z 5) — some junto com o texto no início do dive */
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  display: block;
+  pointer-events: none;
 }
 
 .portalFade {

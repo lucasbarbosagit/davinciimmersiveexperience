@@ -56,6 +56,7 @@ const STAMP_FRAGMENT_SHADER = /* glsl */ `
   uniform sampler2D uPrevTrail;
   uniform vec2 uResolution;
   uniform vec2 uMouse;
+  uniform vec2 uVelocity;
   uniform float uRadius;
   uniform float uDecayPerSecond;
   uniform float uDt;
@@ -69,7 +70,15 @@ const STAMP_FRAGMENT_SHADER = /* glsl */ `
   void main() {
     vec2 pixel = vUv * uResolution;
     vec2 mousePx = uMouse * uResolution;
-    float dist = distance(pixel, mousePx);
+
+    // pincelada de verdade: o carimbo se alonga na direção do movimento
+    // do ponteiro — parado é um pingo redondo, em movimento rápido vira
+    // um traço puxado, como a ponta do pincel arrastando a tinta
+    vec2 d = pixel - mousePx;
+    float speed = length(uVelocity);
+    vec2 dir = speed > 1.0 ? uVelocity / speed : vec2(1.0, 0.0);
+    float stretch = 1.0 + clamp(speed / 1200.0, 0.0, 1.0) * 1.4;
+    float dist = length(vec2(dot(d, dir) / stretch, dot(d, vec2(-dir.y, dir.x))));
 
     float grain = fbm(pixel * 0.07 + vec2(uTime * 34.0, uTime * 11.0));
     float edge = uRadius + (grain - 0.5) * uRadius * 0.22;
@@ -94,7 +103,10 @@ const STAMP_FRAGMENT_SHADER = /* glsl */ `
 `;
 
 // PASSO 2 — usa o buffer acumulado (não a posição do ponteiro) como
-// máscara de mistura entre a pintura finalizada e o estudo.
+// máscara de mistura entre a pintura finalizada e o estudo. A máscara
+// não é um recorte seco: a faixa intermediária dela (a frente do rastro,
+// e o que está desbotando) é tratada como aguada ainda molhada — escurece
+// num filete de sépia, refrata o desenho por baixo e ganha grão de papel.
 const COMPOSE_FRAGMENT_SHADER = /* glsl */ `
   precision highp float;
 
@@ -105,8 +117,12 @@ const COMPOSE_FRAGMENT_SHADER = /* glsl */ `
   uniform vec2 uTexASize;
   uniform vec2 uTexBSize;
   uniform vec2 uFocal;
+  uniform float uRefractStrength;
+  uniform vec3 uRimColor;
 
   varying vec2 vUv;
+
+  ${NOISE_GLSL}
 
   // ShaderMaterial cru não recebe a codificação linear->sRGB automática
   // que o Three.js aplica nos materiais embutidos — sem isso a imagem
@@ -132,13 +148,44 @@ const COMPOSE_FRAGMENT_SHADER = /* glsl */ `
   }
 
   void main() {
-    vec2 uvA = coverUv(vUv, uTexASize, uFocal);
-    vec2 uvB = coverUv(vUv, uTexBSize, uFocal);
-    vec4 colA = texture2D(uTexA, uvA);
-    vec4 colB = texture2D(uTexB, uvB);
-    float mask = texture2D(uTrail, vUv).r;
+    vec2 texel = 1.0 / uResolution;
+    vec2 pixel = vUv * uResolution;
+    float mask = clamp(texture2D(uTrail, vUv).r, 0.0, 1.0);
 
-    vec3 finalColor = mix(colA.rgb, colB.rgb, clamp(mask, 0.0, 1.0));
+    // gradiente da máscara (4 taps a ±2px): aponta da tinta pro papel
+    // seco, e é o que dá direção aos efeitos de borda abaixo
+    float mL = texture2D(uTrail, vUv - vec2(texel.x * 2.0, 0.0)).r;
+    float mR = texture2D(uTrail, vUv + vec2(texel.x * 2.0, 0.0)).r;
+    float mD = texture2D(uTrail, vUv - vec2(0.0, texel.y * 2.0)).r;
+    float mU = texture2D(uTrail, vUv + vec2(0.0, texel.y * 2.0)).r;
+    vec2 grad = vec2(mR - mL, mU - mD);
+
+    // "molhado" = faixa intermediária da máscara; o miolo assentado
+    // (mask ≈ 1) fica de fora pra permanecer nítido
+    float wet = smoothstep(0.03, 0.25, mask) * (1.0 - smoothstep(0.45, 0.9, mask));
+
+    vec2 uvA = coverUv(vUv, uTexASize, uFocal);
+    // refração: o estudo entorta alguns pixels na frente molhada, como
+    // papel ondulando sob a água — zera onde a aguada já secou
+    vec2 uvB = coverUv(vUv + grad * texel * uRefractStrength * wet, uTexBSize, uFocal);
+    vec4 colA = texture2D(uTexA, uvA);
+    vec3 sketch = texture2D(uTexB, uvB).rgb;
+
+    // o trecho revelado se comporta como papel envelhecido, não como
+    // crossfade de foto: manchas largas + grão fino, ambos estáticos
+    // (sem uTime — colados no papel, não fervilhando por cima dele)
+    float mottle = fbm(pixel * 0.012);
+    float grain = noise(pixel * 0.55);
+    sketch *= 1.0 + (mottle - 0.5) * 0.16 + (grain - 0.5) * 0.07;
+
+    vec3 finalColor = mix(colA.rgb, sketch, mask);
+
+    // filete de nanquim acumulado na frente do rastro, quebrado por fbm
+    // pra não virar um anel geométrico perfeito
+    float rim = smoothstep(0.02, 0.16, mask) * (1.0 - smoothstep(0.16, 0.5, mask));
+    rim *= 0.55 + 0.45 * fbm(pixel * 0.05);
+    finalColor = mix(finalColor, uRimColor, rim * 0.6);
+
     gl_FragColor = vec4(linearToSRGB(finalColor), 1.0);
   }
 `;
@@ -189,6 +236,7 @@ export default function InkRevealCanvas({
       uPrevTrail: { value: rtA.texture },
       uResolution: { value: new THREE.Vector2(1, 1) },
       uMouse: { value: new THREE.Vector2(-1, -1) },
+      uVelocity: { value: new THREE.Vector2(0, 0) },
       uRadius: { value: radius },
       // fração do rastro que sobra depois de 1 segundo real — a
       // combinar com pow() no shader, então independe do FPS
@@ -213,6 +261,11 @@ export default function InkRevealCanvas({
       uTexASize: { value: new THREE.Vector2(1, 1) },
       uTexBSize: { value: new THREE.Vector2(1, 1) },
       uFocal: { value: new THREE.Vector2(focal.x, focal.y) },
+      // deslocamento máximo da refração, em texels, na frente molhada
+      uRefractStrength: { value: 55 },
+      // sépia escuro do filete de tinta — convertido pra linear porque o
+      // shader trabalha em linear até o linearToSRGB() final
+      uRimColor: { value: new THREE.Color("#2a1c10").convertSRGBToLinear() },
     };
     const composeMaterial = new THREE.ShaderMaterial({
       uniforms: composeUniforms,
@@ -250,6 +303,14 @@ export default function InkRevealCanvas({
       renderer.setSize(container.clientWidth, container.clientHeight, false);
       rtA.setSize(w, h);
       rtB.setSize(w, h);
+      // setSize preserva (esticado) o conteúdo antigo dos buffers — sem
+      // limpar, um rastro no meio de um resize vira uma mancha deformada
+      // que continua desbotando na proporção errada
+      renderer.setRenderTarget(rtA);
+      renderer.clear();
+      renderer.setRenderTarget(rtB);
+      renderer.clear();
+      renderer.setRenderTarget(null);
       stampUniforms.uResolution.value.set(w, h);
       composeUniforms.uResolution.value.set(w, h);
     }
@@ -278,6 +339,11 @@ export default function InkRevealCanvas({
     container.addEventListener("touchmove", onTouchMove, { passive: true });
     container.addEventListener("touchend", clearPointer);
     container.addEventListener("touchcancel", clearPointer);
+    // rolar não é pintar: sem isso, um cursor parado sobre o canvas
+    // continua carimbando a mesma mancha durante o mergulho de scroll,
+    // e ela sobe junto com o zoom de 18x em vez de desbotar
+    window.addEventListener("scroll", clearPointer, { passive: true });
+    window.addEventListener("wheel", clearPointer, { passive: true });
 
     const resizeObserver = new ResizeObserver(resize);
     resizeObserver.observe(container);
@@ -285,6 +351,10 @@ export default function InkRevealCanvas({
 
     const startTime = performance.now();
     let lastTime = startTime;
+    // velocidade do ponteiro em px/s no espaço do buffer, suavizada —
+    // alimenta o alongamento do carimbo (pincelada) no stamp shader
+    const prevMouse = { x: mouseTarget.x, y: mouseTarget.y };
+    const velSmooth = { x: 0, y: 0 };
     function tick() {
       if (disposed) return;
       const now = performance.now();
@@ -295,6 +365,16 @@ export default function InkRevealCanvas({
       const dt = Math.min((now - lastTime) / 1000, 0.25);
       lastTime = now;
 
+      const res = stampUniforms.uResolution.value;
+      const safeDt = Math.max(dt, 1 / 240);
+      const velX = active ? ((mouseTarget.x - prevMouse.x) * res.x) / safeDt : 0;
+      const velY = active ? ((mouseTarget.y - prevMouse.y) * res.y) / safeDt : 0;
+      velSmooth.x += (velX - velSmooth.x) * 0.2;
+      velSmooth.y += (velY - velSmooth.y) * 0.2;
+      prevMouse.x = mouseTarget.x;
+      prevMouse.y = mouseTarget.y;
+
+      stampUniforms.uVelocity.value.set(velSmooth.x, velSmooth.y);
       stampUniforms.uMouse.value.set(mouseTarget.x, mouseTarget.y);
       stampUniforms.uTime.value = elapsed;
       stampUniforms.uDt.value = dt;
@@ -325,6 +405,8 @@ export default function InkRevealCanvas({
       container.removeEventListener("touchmove", onTouchMove);
       container.removeEventListener("touchend", clearPointer);
       container.removeEventListener("touchcancel", clearPointer);
+      window.removeEventListener("scroll", clearPointer);
+      window.removeEventListener("wheel", clearPointer);
       geometry.dispose();
       stampMaterial.dispose();
       composeMaterial.dispose();

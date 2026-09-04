@@ -22,6 +22,16 @@ export const metadata: Metadata = {
   title: "Il Rinascimento — Uma experiência imersiva",
   description:
     "Uma jornada imersiva pelas obras-primas de Leonardo da Vinci — da geometria ao gesto final.",
+  openGraph: {
+    title: "Il Rinascimento — Uma experiência imersiva",
+    description:
+      "Uma jornada imersiva pelas obras-primas de Leonardo da Vinci — da geometria ao gesto final.",
+    images: ["/assets/preview.webp"],
+  },
+  twitter: {
+    card: "summary_large_image",
+    images: ["/assets/preview.webp"],
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
