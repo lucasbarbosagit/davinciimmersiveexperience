@@ -4,9 +4,9 @@ import { useRef } from "react";
 import Image from "next/image";
 import { gsap } from "@/lib/gsap";
 import { useIsomorphicLayoutEffect } from "@/hooks/useIsomorphicLayoutEffect";
-import ObjectSlot from "./ObjectSlot";
 import InkRevealCanvas from "./InkRevealCanvas";
 import GoldDust from "./GoldDust";
+import HeroIntro from "./HeroIntro";
 import styles from "./Hero.module.css";
 
 export default function Hero() {
@@ -19,7 +19,6 @@ export default function Hero() {
   const portalFadeRef = useRef<HTMLDivElement>(null);
   const orbGlowRef = useRef<HTMLDivElement>(null);
   const portalRevealRef = useRef<HTMLDivElement>(null);
-  const slotRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   useIsomorphicLayoutEffect(() => {
     const heroPin = heroPinRef.current;
@@ -143,36 +142,14 @@ export default function Hero() {
               .to(hintRef.current, { autoAlpha: 0 }, 0)
               .to(scrollCueRef.current, { autoAlpha: 0 }, 0)
               .to(siteNav, { autoAlpha: 0 }, 0)
-              .to(slotRefs.current.filter(Boolean), { autoAlpha: 0 }, 0)
               .to(portalFadeRef.current, { opacity: 1 }, 0.3);
             return;
           }
 
-          // flutuação suave dos objetos ao lado — yPercent, não y, porque
-          // o y em px pertence ao parallax de mouse abaixo (propriedades
-          // distintas compõem; as duas no mesmo y brigariam a cada frame)
-          const slotEls = slotRefs.current.filter(
-            (el): el is HTMLDivElement => Boolean(el),
-          );
-          gsap.to(slotEls, {
-            yPercent: 15,
-            duration: 2.6,
-            ease: "sine.inOut",
-            yoyo: true,
-            repeat: -1,
-            stagger: 0.4,
-          });
-
-          // parallax de mouse: cada objeto numa "profundidade" própria, o
-          // quadro num contra-movimento sutil — desligado assim que o
-          // mergulho começa, porque deslocar heroMedia em px tiraria a
-          // bola de baixo da janela do portal calibrada em %
-          const parallaxSlots = slotEls.map((el, i) => ({
-            x: gsap.quickTo(el, "x", { duration: 0.8, ease: "power3" }),
-            y: gsap.quickTo(el, "y", { duration: 0.8, ease: "power3" }),
-            r: gsap.quickTo(el, "rotation", { duration: 1.2, ease: "power3" }),
-            depth: i === 0 ? 24 : 36,
-          }));
+          // parallax de mouse: contra-movimento sutil do quadro —
+          // desligado assim que o mergulho começa, porque deslocar
+          // heroMedia em px tiraria a bola de baixo da janela do portal
+          // calibrada em %
           const mediaX = gsap.quickTo(heroMedia, "x", { duration: 1, ease: "power3" });
           const mediaY = gsap.quickTo(heroMedia, "y", { duration: 1, ease: "power3" });
           let parallaxOn = true;
@@ -180,11 +157,6 @@ export default function Hero() {
             if (!parallaxOn) return;
             const nx = (e.clientX / window.innerWidth) * 2 - 1;
             const ny = (e.clientY / window.innerHeight) * 2 - 1;
-            for (const p of parallaxSlots) {
-              p.x(nx * p.depth);
-              p.y(ny * p.depth * 0.7);
-              p.r(nx * 2.5);
-            }
             mediaX(nx * -7);
             mediaY(ny * -5);
           };
@@ -219,7 +191,6 @@ export default function Hero() {
             .to(hintRef.current, { autoAlpha: 0, ease: "none", duration: 0.3 }, 0)
             .to(scrollCueRef.current, { autoAlpha: 0, ease: "none", duration: 0.3 }, 0)
             .to(siteNav, { autoAlpha: 0, ease: "none", duration: 0.3 }, 0)
-            .to(slotEls, { autoAlpha: 0, ease: "none", duration: 0.3 }, 0)
             .to(goldDustRef.current, { autoAlpha: 0, ease: "none", duration: 0.3 }, 0)
             // o glow incandesce com o início do zoom (ele mora dentro de
             // heroMedia, então cresce junto com o scale) e é engolido
@@ -329,25 +300,6 @@ export default function Hero() {
         toque e arraste — ou passe o mouse — pra revelar o estudo de proporções
       </p>
 
-      <ObjectSlot
-        src="/assets/object-gear.png"
-        alt="Engrenagem de cristal, objeto decorativo"
-        label="engrenagem de cristal"
-        style={{ top: "14%", left: "7%" }}
-        slotRef={(el) => {
-          slotRefs.current[0] = el;
-        }}
-      />
-      <ObjectSlot
-        src="/assets/object-vitruvio.png"
-        alt="Cartão do Homem Vitruviano, objeto decorativo"
-        label="cartão do Vitruviano"
-        style={{ top: "18%", right: "6%" }}
-        slotRef={(el) => {
-          slotRefs.current[1] = el;
-        }}
-      />
-
       <div className={styles.heroCopy} ref={heroCopyRef}>
         <span className={styles.eyebrow}>Uma experiência imersiva</span>
         <h1>Onde a luz encontra a eternidade</h1>
@@ -361,6 +313,11 @@ export default function Hero() {
         <span>role para explorar</span>
         <span className={styles.line} />
       </div>
+
+      {/* por último no DOM (fica por cima de tudo no hero): o vídeo de
+          abertura — pergaminho virando pintura — que desvanece pro hero
+          interativo já montado por baixo */}
+      <HeroIntro />
     </section>
   );
 }

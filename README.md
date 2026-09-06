@@ -39,15 +39,24 @@ npm run dev
 
 Abre em [http://localhost:3000](http://localhost:3000).
 
+## Arquitetura da informação
+
+Um mestre só — Leonardo — então o site é uma página única em dois movimentos:
+
+1. **A jornada** (abre o site): vídeo de introdução (pergaminho → pintura a óleo) → *Salvator Mundi* interativo → mergulho no orbe → *Batismo de Cristo*. Cada obra guarda uma "porta" própria por onde a transição atravessa.
+2. **Os capítulos** (menu overlay): `#experiencia` (o que é a experiência), `#leonardo` (o mestre, com linha do tempo), `#visitar` (onde/quando/bilhetes + reserva).
+
+O menu é um overlay de tela cheia (hambúrguer na barra fixa); os itens levam às âncoras via Lenis.
+
 ## Estrutura
 
 ```
 src/
   app/                    # rotas (App Router)
   components/
-    nav/                  # navegação fixa, mix-blend-mode: difference
-    hero/                 # seção do Salvator Mundi — reveal em tinta (WebGL), zoom, portal
-    sections/             # demais obras da jornada
+    nav/                  # barra fixa (mix-blend difference) + menu overlay
+    hero/                 # abertura em vídeo + Salvator Mundi — reveal em tinta (WebGL), zoom, portal
+    sections/             # Batismo + capítulos de informação (experiência / Leonardo / visitar)
     SmoothScroll.tsx       # ponte entre Lenis e o ScrollTrigger do GSAP
   hooks/
     useIsomorphicLayoutEffect.ts
@@ -57,4 +66,4 @@ src/
 
 ## Status
 
-Em construção. A jornada atual cobre o *Salvator Mundi* → *Batismo de Cristo*. Próxima obra e os objetos decorativos flutuantes (as caixas tracejadas no hero) ainda entram.
+Em construção. Próximos passos: alternância *Salvator ↔ Gioconda* no hero via displacement (estilo hover-effect), com uma "porta" calibrada por obra pro mergulho de scroll; o experimento da *Última Ceia* (mergulho por linhas de perspectiva + caminhada pela mesa) vive no branch `exp/ceia-perspective-dive`.

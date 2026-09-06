@@ -1,0 +1,168 @@
+/* capítulos de informação depois da jornada pelas obras — mesma família
+   visual do resto: fundo tinta, serifadas cream, detalhes dourados */
+
+.infoSection {
+  position: relative;
+  padding: 18vh 8vw;
+  background: var(--ink);
+  overflow: hidden;
+}
+
+.eyebrow {
+  font-size: 12px;
+  letter-spacing: 2px;
+  color: var(--gold-soft);
+  margin-bottom: 16px;
+  display: block;
+  text-transform: uppercase;
+}
+
+.infoSection h2 {
+  font-family: var(--font-serif), serif;
+  font-weight: 500;
+  font-size: clamp(32px, 4.6vw, 58px);
+  line-height: 1.1;
+  color: var(--cream);
+  max-width: 18ch;
+}
+
+.lead {
+  margin-top: 26px;
+  max-width: 560px;
+  font-size: 16px;
+  line-height: 1.75;
+  color: #e4dcc6;
+}
+
+.factRow {
+  margin-top: 8vh;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 32px;
+  max-width: 900px;
+}
+
+.fact {
+  border-top: 1px solid rgba(201, 162, 75, 0.35);
+  padding-top: 18px;
+}
+
+.fact strong {
+  font-family: var(--font-serif), serif;
+  font-weight: 500;
+  font-size: 26px;
+  color: var(--cream);
+  display: block;
+  margin-bottom: 6px;
+}
+
+.fact span {
+  font-size: 13px;
+  line-height: 1.6;
+  color: #cfc4a3;
+}
+
+/* — Leonardo — */
+
+.leonardoGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  gap: clamp(32px, 6vw, 90px);
+  align-items: center;
+}
+
+@media (max-width: 860px) {
+  .leonardoGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.portraitWrap {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border: 1px solid rgba(201, 162, 75, 0.25);
+}
+
+.portraitCaption {
+  margin-top: 12px;
+  font-size: 12px;
+  letter-spacing: 0.5px;
+  color: #a89a76;
+  font-style: italic;
+}
+
+.timeline {
+  margin-top: 7vh;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  max-width: 640px;
+}
+
+.timeline li {
+  display: flex;
+  gap: 28px;
+  align-items: baseline;
+  padding: 16px 0;
+  border-bottom: 1px solid rgba(201, 162, 75, 0.18);
+  font-size: 15px;
+  color: #e4dcc6;
+}
+
+.timeline li span:first-child {
+  font-family: var(--font-serif), serif;
+  font-size: 19px;
+  color: var(--gold-soft);
+  min-width: 108px;
+}
+
+/* — Visitar — */
+
+.visitGrid {
+  margin-top: 8vh;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 40px;
+  max-width: 980px;
+}
+
+.visitCol {
+  border-top: 1px solid rgba(201, 162, 75, 0.35);
+  padding-top: 18px;
+}
+
+.visitCol h3 {
+  font-size: 12px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--gold-soft);
+  margin-bottom: 12px;
+  font-weight: 500;
+}
+
+.visitCol p {
+  font-size: 15px;
+  line-height: 1.7;
+  color: #e4dcc6;
+}
+
+.visitCta {
+  margin-top: 8vh;
+  display: inline-block;
+  background: none;
+  cursor: pointer;
+  border: 1px solid var(--gold);
+  border-radius: 999px;
+  padding: 18px 44px;
+  font-size: 14px;
+  letter-spacing: 1px;
+  color: var(--gold-soft);
+  transition: background 0.3s ease, color 0.3s ease;
+}
+
+.visitCta:hover {
+  background: var(--gold);
+  color: var(--ink);
+}
