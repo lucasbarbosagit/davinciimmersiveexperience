@@ -25,33 +25,83 @@
 }
 
 .caption {
-  /* as quatro legendas ocupam o mesmo lugar, empilhadas — só a opacidade
-     (escrita direto via style.opacity no onUpdate, sem passar pelo GSAP)
-     decide qual está acesa a cada instante do scroll */
+  /* placa de museu de verdade: fica ancorada num ponto da parede ao lado
+     do quadro (não mais empilhada no centro da tela) — left/top ficam
+     em 0 de propósito, é o transform (escrito via style.transform no
+     onUpdate, sem passar pelo GSAP) que posiciona E ancora pela borda
+     certa (translate(-100%,-50%): a placa cresce pra esquerda a partir
+     do ponto, como uma etiqueta presa na parede) */
   position: absolute;
   left: 0;
-  right: 0;
-  bottom: 10vh;
-  padding: 0 6vw;
+  top: 0;
+  width: 236px;
   z-index: 3;
-  text-align: center;
+  padding: 20px 22px;
   opacity: 0;
   pointer-events: none;
+  background: linear-gradient(155deg, rgba(235, 227, 206, 0.96), rgba(216, 206, 178, 0.94));
+  border: 1px solid rgba(201, 162, 75, 0.5);
+  box-shadow:
+    0 18px 40px rgba(0, 0, 0, 0.5),
+    0 0 46px rgba(217, 188, 122, 0.16);
+}
+
+.caption::after {
+  /* o pino dourado luminoso que marca, na própria parede, o ponto exato
+     que a placa está anotando — sem ele a etiqueta parece flutuar solta */
+  content: "";
+  position: absolute;
+  right: -5px;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--gold);
+  transform: translateY(-50%);
+  box-shadow: 0 0 10px 3px rgba(217, 188, 122, 0.65);
 }
 
 .captionEyebrow {
   display: block;
-  font-size: 12px;
+  font-size: 11px;
   letter-spacing: 2px;
-  color: var(--gold-soft);
-  margin-bottom: 12px;
+  color: #8a6f2f;
+  margin-bottom: 10px;
+  text-transform: uppercase;
 }
 
 .caption h2 {
   font-family: var(--font-serif), serif;
   font-weight: 500;
-  font-size: clamp(28px, 4.4vw, 54px);
-  color: var(--cream);
+  font-size: clamp(20px, 1.6vw, 26px);
+  line-height: 1.05;
+  color: #241d12;
+}
+
+.captionMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin: 12px 0 14px;
+  font-size: 11px;
+  letter-spacing: 0.2px;
+  color: #5b4d34;
+}
+
+.captionDesc {
+  font-size: 12.5px;
+  line-height: 1.55;
+  font-style: italic;
+  color: #3a3122;
+}
+
+@media (max-width: 880px) {
+  /* sem espaço lateral suficiente pra etiqueta flutuante em telas
+     estreitas — a galeria em si já funciona sem ela (a moldura entra em
+     foco de perto), então some em vez de ficar ilegível espremida */
+  .caption {
+    display: none;
+  }
 }
 
 .galleryFallback {
