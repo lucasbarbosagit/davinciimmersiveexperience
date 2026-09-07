@@ -51,16 +51,15 @@ export default function LeonardoSection() {
         <div data-reveal>
           <div className={styles.portraitWrap}>
             <Image
-              src="/assets/leonardo-orb.jpg"
-              alt="Retrato imaginado de Leonardo da Vinci segurando o orbe de cristal do Salvator Mundi"
+              src="/assets/davinci_hero.jpeg"
+              alt="Retrato imaginado de Leonardo da Vinci com um pincel e um códice aberto"
               fill
               sizes="(max-width: 860px) 90vw, 45vw"
-              style={{ objectFit: "cover", objectPosition: "50% 20%" }}
+              style={{ objectFit: "cover", objectPosition: "50% 28%" }}
             />
           </div>
           <p className={styles.portraitCaption}>
-            retrato imaginado — o orbe do Salvator Mundi nas mãos de quem o
-            pintou
+            retrato imaginado — o mestre entre o pincel e o códice
           </p>
         </div>
       </div>

@@ -1,24 +1,140 @@
 "use client";
 
-import { useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { gsap } from "@/lib/gsap";
 import { useIsomorphicLayoutEffect } from "@/hooks/useIsomorphicLayoutEffect";
-import InkRevealCanvas from "./InkRevealCanvas";
+import ArtworkCanvas, { type ArtworkCanvasHandle } from "./ArtworkCanvas";
 import GoldDust from "./GoldDust";
 import HeroIntro from "./HeroIntro";
 import styles from "./Hero.module.css";
+
+// cada obra guarda uma porta — a passagem pro capítulo seguinte: o orbe
+// no Salvator, o olho na Gioconda, a página do códice no retrato do
+// mestre. Posição e raio são FRAÇÕES DA IMAGEM (não da tela): a
+// conversão pra viewport acontece em getDoorOnScreen a cada uso, então a
+// calibração sobrevive a resize e à troca de obra no meio da sessão.
+const ARTWORKS = [
+  {
+    src: "/assets/salvator-cut.png",
+    name: ["Salvator", "Mundi"],
+    w: 1024,
+    h: 572,
+    door: { x: 0.638, y: 0.857, r: 0.101, zoom: 18 },
+  },
+  {
+    src: "/assets/gioconda-cut.png",
+    name: ["La", "Gioconda"],
+    w: 1376,
+    h: 768,
+    // o olho é uma porta minúscula — precisa de bem mais zoom pra janela
+    // do portal cobrir a tela quando o mergulho termina
+    door: { x: 0.451, y: 0.34, r: 0.024, zoom: 55 },
+  },
+  {
+    src: "/assets/davinci-cut.png",
+    name: ["Il", "Maestro"],
+    w: 1376,
+    h: 768,
+    door: { x: 0.708, y: 0.742, r: 0.086, zoom: 22 },
+  },
+];
+
+type DoorOnScreen = { xPct: number; yPct: number; radiusVh: number; zoom: number };
+
+// espelha em JS o "cover" centrado que o ArtworkCanvas faz no shader —
+// os dois têm que concordar pixel a pixel pra porta ficar colada na obra
+function getDoorOnScreen(artwork: (typeof ARTWORKS)[number]): DoorOnScreen {
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const scale = Math.max(vw / artwork.w, vh / artwork.h);
+  const drawnW = artwork.w * scale;
+  const drawnH = artwork.h * scale;
+  const px = (vw - drawnW) / 2 + artwork.door.x * drawnW;
+  const py = (vh - drawnH) / 2 + artwork.door.y * drawnH;
+  return {
+    xPct: (px / vw) * 100,
+    yPct: (py / vh) * 100,
+    radiusVh: ((artwork.door.r * drawnH) / vh) * 100,
+    zoom: artwork.door.zoom,
+  };
+}
+
+// a grade de estudo técnico do fundo — valores fixos (nada aleatório),
+// pra render do servidor e do cliente baterem na hidratação
+const GRID_V = [10, 26, 50, 74, 90];
+const GRID_H = [14, 40, 66, 88];
+const CROSSHAIRS: [number, number][] = [
+  [26, 40],
+  [74, 40],
+  [50, 88],
+];
+const GRID_LABELS = [
+  { text: "503, 3.215", left: "27%", top: "11%" },
+  { text: "-183, 5.09", left: "75.5%", top: "11%" },
+  { text: "520, 2.30", left: "75.5%", top: "62.5%" },
+  { text: "-150, -1.30", left: "11%", top: "62.5%" },
+];
 
 export default function Hero() {
   const heroPinRef = useRef<HTMLElement>(null);
   const heroMediaRef = useRef<HTMLDivElement>(null);
   const goldDustRef = useRef<HTMLDivElement>(null);
   const heroCopyRef = useRef<HTMLDivElement>(null);
+  const workTitleRef = useRef<HTMLDivElement>(null);
+  const workDotsRef = useRef<HTMLDivElement>(null);
   const hintRef = useRef<HTMLParagraphElement>(null);
   const scrollCueRef = useRef<HTMLDivElement>(null);
   const portalFadeRef = useRef<HTMLDivElement>(null);
   const orbGlowRef = useRef<HTMLDivElement>(null);
   const portalRevealRef = useRef<HTMLDivElement>(null);
+  const canvasHandleRef = useRef<ArtworkCanvasHandle>(null);
+
+  const [activeIndex, setActiveIndex] = useState(0);
+  const activeIndexRef = useRef(0);
+  const divingRef = useRef(false);
+
+  // o halo da porta acompanha a obra ativa: posição e tamanho vêm da
+  // mesma matemática de cover do mergulho
+  const applyGlowPosition = useCallback((index: number) => {
+    const glow = orbGlowRef.current;
+    if (!glow) return;
+    const door = getDoorOnScreen(ARTWORKS[index]);
+    gsap.set(glow, {
+      left: `${door.xPct}%`,
+      top: `${door.yPct}%`,
+      width: `${door.radiusVh * 3.2}vh`,
+      height: `${door.radiusVh * 3.2}vh`,
+    });
+  }, []);
+
+  const handleIndexChange = useCallback(
+    (index: number) => {
+      activeIndexRef.current = index;
+      setActiveIndex(index);
+      applyGlowPosition(index);
+    },
+    [applyGlowPosition],
+  );
+
+  // título grande da obra desliza a cada troca
+  useEffect(() => {
+    const title = workTitleRef.current;
+    if (!title) return;
+    const lines = title.querySelectorAll(`.${styles.workTitleLine}`);
+    gsap.fromTo(
+      lines,
+      { yPercent: 60, autoAlpha: 0 },
+      { yPercent: 0, autoAlpha: 1, duration: 0.7, stagger: 0.08, ease: "power3.out" },
+    );
+  }, [activeIndex]);
+
+  useEffect(() => {
+    applyGlowPosition(activeIndexRef.current);
+    const onResize = () => applyGlowPosition(activeIndexRef.current);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, [applyGlowPosition]);
 
   useIsomorphicLayoutEffect(() => {
     const heroPin = heroPinRef.current;
@@ -30,44 +146,18 @@ export default function Hero() {
     if (!heroPin || !heroMedia) return;
 
     const ctx = gsap.context(() => {
-      // zoom da câmera até o orb — mesmo centro medido em px que calibrou
-      // o portal (925,800 de 1440x900 → 64.24%/88.89%), raio real 95px
-      // (10.555vh a 900px de altura, ou seja 21.11vh de diâmetro)
-      gsap.set(heroMedia, { transformOrigin: "64.24% 88.89%" });
-
-      // o portal não finge uma imagem própria: ele é uma janela (clip-path
-      // circle) que cresce sobre o quadro JÁ RESOLVIDO da BatismoSection —
-      // mesmo arquivo, mesmo recorte de repouso (object-position 50%/15%,
-      // sem zoom nem tint). A animação de entrada da própria BatismoSection
-      // roda enquanto ela ainda está escondida atrás do pin do Hero (start
-      // "top bottom" a end "top top" — termina exatamente quando o pin
-      // solta), então o que o usuário vê ao "entrar na bola" É esse estado
-      // final: o quadro inteiro, completo, tela cheia.
-      // o raio acompanha o zoom o tempo todo, crescendo junto com a bola
-      // desde o primeiro instante de scroll — é isso que dá a sensação de
-      // "entrando na bola de verdade". Em repouso (raio 0) fica invisível;
-      // no instante em que o scroll começa, salta direto pro raio real da
-      // bola (raio = base * z, e z já é 1 nesse ponto) e continua
-      // crescendo a partir daí — sem esse salto inicial ele nasceria
-      // visível mesmo parado, porque scrub timelines renderizam a posição
-      // 0 imediatamente ao montar (z=1) mesmo sem o usuário ter rolado
-      const ORB_CENTER = "64.24% 88.89%";
-      const ORB_BASE_RADIUS_VH = 10.555;
-      // além do raio 0, o portal nasce invisível e desfocado: a janela
-      // (clip-path) acompanha a bola desde o primeiro tick, mas o quadro
-      // dentro dela só se MATERIALIZA no meio do mergulho (opacity/blur
-      // animados no timeline) — sem isso o Batismo aparecia inteiro,
-      // nítido, no primeiro pixel de scroll
+      // o portal nasce invisível e desfocado: a janela (clip-path)
+      // acompanha a porta desde o primeiro tick, mas o Batismo dentro
+      // dela só se MATERIALIZA no meio do mergulho
       gsap.set(portalRevealRef.current, {
-        clipPath: `circle(0vh at ${ORB_CENTER})`,
+        clipPath: "circle(0vh at 50% 50%)",
         opacity: 0,
         filter: "blur(14px)",
       });
-      const zoomState = { z: 1 };
+      // p normalizado 0->1; o zoom real vem da porta ativa no onUpdate,
+      // então cada obra mergulha até a profundidade da própria porta
+      const progState = { p: 0 };
 
-      // chamativo: halo dourado pulsando na bola antes do usuário rolar,
-      // convidando o olhar pra ela — morto e desvanecido assim que o
-      // scroll começa (ver "orbGlowTween.kill()" abaixo)
       gsap.set(orbGlowRef.current, {
         opacity: 0.5,
         scale: 0.92,
@@ -84,9 +174,6 @@ export default function Hero() {
       // scrub timelines renderizam a posição 0 imediatamente ao montar —
       // mexer no glow ali dentro do próprio timeline apagava o pulso antes
       // do usuário sequer rolar. onUpdate só dispara com progresso real.
-      // No caminho normal o pulso é só PAUSADO (o timeline de scroll assume
-      // o glow: incandesce junto com o começo do mergulho e some engolido
-      // por ele); voltar ao topo retoma o pulso de onde parou.
       let glowPulsePaused = false;
       const pauseGlowPulse = () => {
         if (glowPulsePaused) return;
@@ -98,8 +185,6 @@ export default function Hero() {
         glowPulsePaused = false;
         orbGlowTween.resume();
       };
-      // no caminho reduced não há mergulho pra assumir o glow — lá ele
-      // simplesmente morre com fade no primeiro scroll, como antes
       let glowKilled = false;
       const killOrbGlow = () => {
         if (glowKilled) return;
@@ -112,8 +197,6 @@ export default function Hero() {
         });
       };
 
-      // respeita quem pede menos movimento: troca o mergulho de câmera
-      // por um crossfade simples, sem o zoom de 18x nem o pin longo
       const mm = gsap.matchMedia();
 
       mm.add(
@@ -139,28 +222,14 @@ export default function Hero() {
                 },
               })
               .to(heroCopyRef.current, { autoAlpha: 0 }, 0)
+              .to(workTitleRef.current, { autoAlpha: 0 }, 0)
+              .to(workDotsRef.current, { autoAlpha: 0 }, 0)
               .to(hintRef.current, { autoAlpha: 0 }, 0)
               .to(scrollCueRef.current, { autoAlpha: 0 }, 0)
               .to(siteNav, { autoAlpha: 0 }, 0)
               .to(portalFadeRef.current, { opacity: 1 }, 0.3);
             return;
           }
-
-          // parallax de mouse: contra-movimento sutil do quadro —
-          // desligado assim que o mergulho começa, porque deslocar
-          // heroMedia em px tiraria a bola de baixo da janela do portal
-          // calibrada em %
-          const mediaX = gsap.quickTo(heroMedia, "x", { duration: 1, ease: "power3" });
-          const mediaY = gsap.quickTo(heroMedia, "y", { duration: 1, ease: "power3" });
-          let parallaxOn = true;
-          const onHeroPointerMove = (e: PointerEvent) => {
-            if (!parallaxOn) return;
-            const nx = (e.clientX / window.innerWidth) * 2 - 1;
-            const ny = (e.clientY / window.innerHeight) * 2 - 1;
-            mediaX(nx * -7);
-            mediaY(ny * -5);
-          };
-          heroPin.addEventListener("pointermove", onHeroPointerMove);
 
           gsap
             .timeline({
@@ -173,70 +242,63 @@ export default function Hero() {
                 onUpdate: (self) => {
                   if (self.progress > 0.001) {
                     pauseGlowPulse();
-                    if (parallaxOn) {
-                      parallaxOn = false;
-                      mediaX(0);
-                      mediaY(0);
-                    }
+                    divingRef.current = true;
                   } else {
                     resumeGlowPulse();
-                    parallaxOn = true;
+                    divingRef.current = false;
                   }
                 },
               },
             })
-            // ATO 1 (0 → 0.3): a moldura esvazia — texto, dicas, nav,
-            // objetos e poeira saem antes da parte violenta do zoom
+            // ATO 1 (0 -> 0.3): a moldura esvazia antes do zoom violento
             .to(heroCopyRef.current, { autoAlpha: 0, y: -20, ease: "none", duration: 0.3 }, 0)
+            .to(workTitleRef.current, { autoAlpha: 0, y: -16, ease: "none", duration: 0.3 }, 0)
+            .to(workDotsRef.current, { autoAlpha: 0, ease: "none", duration: 0.3 }, 0)
             .to(hintRef.current, { autoAlpha: 0, ease: "none", duration: 0.3 }, 0)
             .to(scrollCueRef.current, { autoAlpha: 0, ease: "none", duration: 0.3 }, 0)
             .to(siteNav, { autoAlpha: 0, ease: "none", duration: 0.3 }, 0)
             .to(goldDustRef.current, { autoAlpha: 0, ease: "none", duration: 0.3 }, 0)
-            // o glow incandesce com o início do zoom (ele mora dentro de
-            // heroMedia, então cresce junto com o scale) e é engolido
-            // pelo mergulho logo depois
+            // o glow incandesce com o início do zoom (mora dentro de
+            // heroMedia, cresce junto) e é engolido pelo mergulho
             .to(orbGlowRef.current, { opacity: 1, ease: "none", duration: 0.15 }, 0.15)
             .to(orbGlowRef.current, { opacity: 0, ease: "none", duration: 0.2 }, 0.3)
-            // ATO 2 (0.15 → 1): um único valor de zoom dirige tanto o
-            // mergulho na pintura quanto o raio da janela do portal —
-            // mesma curva de easing pros dois, então a borda da janela
-            // nunca desalinha da bola de vidro desenhada por baixo
+            // ATO 2 (0.15 -> 1): mergulho na porta da obra ATIVA — a
+            // mesma porta dirige o scale, a origem e o raio da janela,
+            // então a borda nunca desalinha do orbe/olho/códice
             .to(
-              zoomState,
+              progState,
               {
-                z: 18,
+                p: 1,
                 ease: "power2.in",
                 duration: 0.85,
                 onUpdate: () => {
-                  gsap.set(heroMedia, { scale: zoomState.z });
-                  const started = zoomState.z > 1.0005;
+                  const door = getDoorOnScreen(ARTWORKS[activeIndexRef.current]);
+                  const z = 1 + (door.zoom - 1) * progState.p;
+                  gsap.set(heroMedia, {
+                    scale: z,
+                    transformOrigin: `${door.xPct}% ${door.yPct}%`,
+                  });
+                  const started = progState.p > 0.0001;
                   gsap.set(portalRevealRef.current, {
                     clipPath: started
-                      ? `circle(${(ORB_BASE_RADIUS_VH * zoomState.z).toFixed(2)}vh at ${ORB_CENTER})`
-                      : `circle(0vh at ${ORB_CENTER})`,
+                      ? `circle(${(door.radiusVh * z).toFixed(2)}vh at ${door.xPct.toFixed(2)}% ${door.yPct.toFixed(2)}%)`
+                      : "circle(0vh at 50% 50%)",
                   });
                 },
               },
               0.15,
             )
-            // ATO 3 (0.35 → 0.7): o Batismo se materializa DENTRO do
-            // cristal — de invisível e desfocado a nítido, em vez de já
-            // estar colado na janela desde o primeiro tick
+            // ATO 3 (0.35 -> 0.7): o Batismo se materializa DENTRO da porta
             .to(
               portalRevealRef.current,
               { opacity: 1, filter: "blur(0px)", ease: "none", duration: 0.35 },
               0.35,
             )
-            // ATO 4 (0.5 → 1): a passagem pela cor do vidro — o véu
-            // azul-acinzentado (#34383c, amostrado da esfera) sobe no meio
-            // do mergulho e se dissolve exatamente quando o pin solta,
-            // resolvendo no céu do Batismo, que está na mesma paleta
+            // ATO 4 (0.5 -> 1): a passagem pela cor do vidro — o véu
+            // azul-acinzentado sobe no meio do mergulho e se dissolve
+            // exatamente quando o pin solta, no céu do Batismo
             .to(portalFadeRef.current, { opacity: 0.55, ease: "none", duration: 0.2 }, 0.5)
             .to(portalFadeRef.current, { opacity: 0, ease: "none", duration: 0.3 }, 0.7);
-
-          return () => {
-            heroPin.removeEventListener("pointermove", onHeroPointerMove);
-          };
         },
       );
 
@@ -249,36 +311,70 @@ export default function Hero() {
   return (
     <section className={styles.heroPin} id="hero" ref={heroPinRef}>
       <div className={styles.heroMedia} ref={heroMediaRef}>
-        <InkRevealCanvas
-          baseSrc="/assets/salvator-mundi.jpg"
-          revealSrc="/assets/estudo-salvator.jpg"
+        <div className={styles.heroBackdrop} />
+
+        {/* grade de estudo técnico: linhas finas + miras + coordenadas,
+            como numa prancheta de proporções do ateliê */}
+        <svg
+          className={styles.heroGrid}
+          viewBox="0 0 100 100"
+          preserveAspectRatio="none"
+          aria-hidden="true"
+        >
+          {GRID_V.map((x) => (
+            <line key={`v${x}`} x1={x} y1={0} x2={x} y2={100} vectorEffect="non-scaling-stroke" />
+          ))}
+          {GRID_H.map((y) => (
+            <line key={`h${y}`} x1={0} y1={y} x2={100} y2={y} vectorEffect="non-scaling-stroke" />
+          ))}
+        </svg>
+        {CROSSHAIRS.map(([x, y]) => (
+          <span
+            key={`${x}-${y}`}
+            className={styles.crosshair}
+            style={{ left: `${x}%`, top: `${y}%` }}
+            aria-hidden="true"
+          />
+        ))}
+        {GRID_LABELS.map((label) => (
+          <span
+            key={label.text}
+            className={styles.gridLabel}
+            style={{ left: label.left, top: label.top }}
+            aria-hidden="true"
+          >
+            {label.text}
+          </span>
+        ))}
+
+        {/* estudos em traço branco nas margens, fundidos por screen
+            (linhas brancas sobre preto — só o traço sobrevive) */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img className={`${styles.sketch} ${styles.sketchFlyer}`} src="/assets/sketch-flyer.jpg" alt="" />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img className={`${styles.sketch} ${styles.sketchVitruvian}`} src="/assets/sketch-vitruvian.jpg" alt="" />
+
+        <ArtworkCanvas
+          ref={canvasHandleRef}
+          sources={ARTWORKS.map((a) => a.src)}
+          onIndexChange={handleIndexChange}
+          disabledRef={divingRef}
         />
         <div className={styles.orbGlow} ref={orbGlowRef} role="presentation" />
       </div>
-      {/* fora de heroMedia de propósito: é uma vinheta pra legibilidade do
-          texto sobre o quadro parado, não deve escalar junto no zoom de 18x
-          (senão a banda mais escura do gradiente, perto de 100%, some o
-          zoom inteiro em preto — foi exatamente o que aconteceu quando
-          morava dentro de heroMedia) */}
+
+      {/* fora de heroMedia de propósito: vinheta pra legibilidade, não
+          deve escalar junto no zoom do mergulho */}
       <div className={styles.heroScrim} />
 
-      {/* poeira dourada suspensa na luz — o wrapper existe pro timeline
-          de scroll ter um alvo estável pra esconder (o canvas em si some
-          sozinho sob prefers-reduced-motion) */}
       <div className={styles.goldDust} ref={goldDustRef} role="presentation">
         <GoldDust />
       </div>
 
       {/* janela do portal: clip-path circle crescendo sobre o quadro em
-          repouso da BatismoSection (mesmo arquivo, mesmo recorte, mesmo
-          texto) — fica fora de heroMedia (não herda o scale de 18x) porque
-          o próprio raio já é animado em sincronia com o zoom via clip-path,
-          não por transform */}
-      <div
-        className={styles.portalReveal}
-        ref={portalRevealRef}
-        role="presentation"
-      >
+          repouso da BatismoSection — fica fora de heroMedia (não herda o
+          scale) porque o próprio raio já é animado em sincronia */}
+      <div className={styles.portalReveal} ref={portalRevealRef} role="presentation">
         <div className={styles.portalRevealMedia}>
           <Image
             src="/assets/batismo-cristo.jpg"
@@ -297,7 +393,7 @@ export default function Hero() {
       <div className={styles.portalFade} ref={portalFadeRef} />
 
       <p className={styles.hint} ref={hintRef}>
-        toque e arraste — ou passe o mouse — pra revelar o estudo de proporções
+        passe o mouse sobre a obra pra trocar — role pra atravessar a porta
       </p>
 
       <div className={styles.heroCopy} ref={heroCopyRef}>
@@ -307,6 +403,31 @@ export default function Hero() {
           As obras-primas de Leonardo da Vinci, reveladas camada por camada — da
           geometria ao gesto final.
         </p>
+      </div>
+
+      <div className={styles.workTitle} ref={workTitleRef}>
+        <span className={styles.workCount}>
+          obra {String(activeIndex + 1).padStart(2, "0")} / {String(ARTWORKS.length).padStart(2, "0")}
+        </span>
+        <h2>
+          {ARTWORKS[activeIndex].name.map((line) => (
+            <span key={line} className={styles.workTitleLine}>
+              {line}
+            </span>
+          ))}
+        </h2>
+      </div>
+
+      <div className={styles.workDots} ref={workDotsRef}>
+        {ARTWORKS.map((artwork, i) => (
+          <button
+            key={artwork.src}
+            type="button"
+            aria-label={`Ver ${artwork.name.join(" ")}`}
+            className={i === activeIndex ? styles.workDotActive : styles.workDot}
+            onClick={() => canvasHandleRef.current?.goTo(i)}
+          />
+        ))}
       </div>
 
       <div className={styles.scrollCue} ref={scrollCueRef}>
