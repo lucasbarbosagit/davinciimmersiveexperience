@@ -159,8 +159,8 @@ export default function Hero() {
 
     const ctx = gsap.context(() => {
       // o portal nasce invisível e desfocado: a janela (clip-path)
-      // acompanha a porta desde o primeiro tick, mas o Batismo dentro
-      // dela só se MATERIALIZA no meio do mergulho
+      // acompanha a porta desde o primeiro tick, mas a prévia da galeria
+      // dentro dela só se MATERIALIZA no meio do mergulho
       gsap.set(portalRevealRef.current, {
         clipPath: "circle(0vh at 50% 50%)",
         opacity: 0,
@@ -336,7 +336,7 @@ export default function Hero() {
               },
               0.15,
             )
-            // ATO 3 (0.35 -> 0.7): o Batismo se materializa DENTRO da porta
+            // ATO 3 (0.35 -> 0.7): a galeria se materializa DENTRO da porta
             .to(
               portalRevealRef.current,
               { opacity: 1, filter: "blur(0px)", ease: "none", duration: 0.35 },
@@ -344,7 +344,7 @@ export default function Hero() {
             )
             // ATO 4 (0.5 -> 1): a passagem pela cor do vidro — o véu
             // azul-acinzentado sobe no meio do mergulho e se dissolve
-            // exatamente quando o pin solta, no céu do Batismo
+            // exatamente quando o pin solta, na entrada da galeria
             .to(
               portalFadeRef.current,
               { opacity: 0.55, ease: "none", duration: 0.2 },
@@ -449,9 +449,15 @@ export default function Hero() {
         <GoldDust />
       </div>
 
-      {/* janela do portal: clip-path circle crescendo sobre o quadro em
-          repouso da BatismoSection — fica fora de heroMedia (não herda o
-          scale) porque o próprio raio já é animado em sincronia */}
+      {/* janela do portal: clip-path circle crescendo sobre uma prévia
+          estática da entrada do corredor da galeria — fica fora de
+          heroMedia (não herda o scale) porque o próprio raio já é animado
+          em sincronia. É só uma foto, não a cena 3D de verdade (essa vem
+          depois que o pin solta): a GallerySection não precisa de uma
+          animação de entrada escondida atrás do pin como a antiga
+          BatismoSection precisava, porque sua própria câmera de repouso
+          (progresso 0 do scroll) já É a vista de entrada do corredor —
+          então não há costura pra esconder, só a troca foto -> WebGL */}
       <div
         className={styles.portalReveal}
         ref={portalRevealRef}
@@ -459,24 +465,20 @@ export default function Hero() {
       >
         <div className={styles.portalRevealMedia}>
           <Image
-            src="/assets/batismo-cristo.jpg"
+            src="/assets/salvator-mundi.jpg"
             alt=""
             fill
             sizes="100vw"
-            style={{ objectFit: "cover", objectPosition: "50% 15%" }}
+            style={{ objectFit: "cover", objectPosition: "50% 30%" }}
           />
         </div>
         <div className={styles.portalRevealCopy}>
-          <span className={styles.portalRevealEyebrow}>Batismo de Cristo</span>
-          <h2>A luz desce sobre as águas</h2>
+          <span className={styles.portalRevealEyebrow}>A coleção</span>
+          <h2>Entre na galeria das obras</h2>
         </div>
       </div>
 
       <div className={styles.portalFade} ref={portalFadeRef} />
-
-      <p className={styles.hint} ref={hintRef}>
-        passe o mouse sobre a obra pra trocar — role pra atravessar a porta
-      </p>
 
       {/* a marca do site vira o título monumental do hero — mesma coluna
           esquerda onde a lista persistente do Nav (site-desk-nav) continua

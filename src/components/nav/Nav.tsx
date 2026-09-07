@@ -11,9 +11,10 @@ import styles from "./Nav.module.css";
 // informação que vêm depois dela
 const MENU_ITEMS = [
   { label: "Início", target: "#hero", index: "01" },
-  { label: "A experiência", target: "#experiencia", index: "02" },
-  { label: "Leonardo", target: "#leonardo", index: "03" },
-  { label: "Visitar", target: "#visitar", index: "04" },
+  { label: "Obras", target: "#galeria", index: "02" },
+  { label: "A experiência", target: "#experiencia", index: "03" },
+  { label: "Leonardo", target: "#leonardo", index: "04" },
+  { label: "Visitar", target: "#visitar", index: "05" },
 ];
 
 export default function Nav() {

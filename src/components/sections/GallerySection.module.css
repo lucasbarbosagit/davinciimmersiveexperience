@@ -1,0 +1,109 @@
+.galleryPin {
+  height: 100vh;
+  position: relative;
+  overflow: hidden;
+  background: #0b0a07;
+}
+
+.galleryCanvas {
+  position: absolute;
+  inset: 0;
+}
+
+.galleryScrim {
+  /* vinheta leve pra legibilidade das legendas sem lavar o contraste do
+     corredor — mais forte nas bordas, quase nula no centro da tela */
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(6, 5, 3, 0) 45%,
+    rgba(6, 5, 3, 0.55) 100%
+  );
+  pointer-events: none;
+  z-index: 2;
+}
+
+.caption {
+  /* as quatro legendas ocupam o mesmo lugar, empilhadas — só a opacidade
+     (escrita direto via style.opacity no onUpdate, sem passar pelo GSAP)
+     decide qual está acesa a cada instante do scroll */
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 10vh;
+  padding: 0 6vw;
+  z-index: 3;
+  text-align: center;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.captionEyebrow {
+  display: block;
+  font-size: 12px;
+  letter-spacing: 2px;
+  color: var(--gold-soft);
+  margin-bottom: 12px;
+}
+
+.caption h2 {
+  font-family: var(--font-serif), serif;
+  font-weight: 500;
+  font-size: clamp(28px, 4.4vw, 54px);
+  color: var(--cream);
+}
+
+.galleryFallback {
+  /* sob prefers-reduced-motion: sem WebGL, sem pin — só uma grade estática
+     das mesmas quatro obras, na mesma ordem da caminhada */
+  padding: 14vh 8vw 10vh;
+  background: var(--ink);
+}
+
+.fallbackEyebrow {
+  font-size: 12px;
+  letter-spacing: 2px;
+  color: var(--gold-soft);
+  text-transform: uppercase;
+  display: block;
+  margin-bottom: 16px;
+}
+
+.galleryFallback h2 {
+  font-family: var(--font-serif), serif;
+  font-weight: 500;
+  font-size: clamp(30px, 4.6vw, 56px);
+  color: var(--cream);
+  margin-bottom: 8vh;
+}
+
+.fallbackGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 40px;
+}
+
+.fallbackItem img {
+  width: 100%;
+  height: 260px;
+  object-fit: cover;
+  border: 1px solid rgba(201, 162, 75, 0.3);
+}
+
+.fallbackItem figcaption {
+  margin-top: 14px;
+}
+
+.fallbackItem strong {
+  display: block;
+  font-family: var(--font-serif), serif;
+  font-weight: 500;
+  font-size: 20px;
+  color: var(--cream);
+}
+
+.fallbackItem span {
+  font-size: 13px;
+  color: #a89a76;
+}

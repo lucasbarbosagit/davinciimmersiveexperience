@@ -183,20 +183,20 @@
 }
 
 .portalRevealMedia {
-  /* o quadro em repouso da BatismoSection: mesmo arquivo, mesmo recorte
-     (object-position 50%/15%, cover), sem zoom nem tint — porque quando o
-     pin do Hero solta, a BatismoSection real já terminou sua própria
-     animação de entrada (que roda escondida atrás do pin) e está nesse
-     estado final. Mostrar isso desde já, só através de uma janela menor,
-     é o que faz a janela crescer sem costura até virar a própria seção */
+  /* prévia estática da entrada da galeria (foto, não a cena 3D real) —
+     diferente do antigo esquema com a BatismoSection (que precisava
+     terminar uma animação escondida atrás do pin pra virar, pixel a
+     pixel, o que aparecia dentro da janela), a GallerySection não tem
+     essa costura pra esconder: sua câmera de repouso já É a entrada do
+     corredor. Essa janela só existe pra dar um gostinho da cor/luz antes
+     do WebGL de verdade assumir quando o pin solta */
   position: absolute;
   inset: 0;
 }
 
 .portalRevealCopy {
-  /* mesmo texto/posição de .batismoCopy (BatismoSection.module.css) —
-     revelado junto pela mesma janela, pra "dentro da bola" já ser o
-     quadro seguinte completo, com o texto dele, não só a imagem */
+  /* texto de entrada da galeria, na mesma posição/estilo que os capítulos
+     seguintes usam — "dentro da bola" já anuncia pra onde o mergulho leva */
   position: absolute;
   left: 0;
   right: 0;
