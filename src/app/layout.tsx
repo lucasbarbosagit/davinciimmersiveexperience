@@ -19,11 +19,11 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Il Rinascimento — Uma experiência imersiva",
+  title: "Da Vinci Immersive — Uma experiência imersiva",
   description:
     "Uma jornada imersiva pelas obras-primas de Leonardo da Vinci — da geometria ao gesto final.",
   openGraph: {
-    title: "Il Rinascimento — Uma experiência imersiva",
+    title: "Da Vinci Immersive — Uma experiência imersiva",
     description:
       "Uma jornada imersiva pelas obras-primas de Leonardo da Vinci — da geometria ao gesto final.",
     images: ["/assets/salvator-mundi.jpg"],

@@ -1,3 +1,66 @@
+/* elementos que só existem no chrome compacto (hambúrguer + overlay);
+   em telas largas a lista persistente (.deskNav) assume a navegação */
+.mobileOnly {
+  display: inline-flex;
+}
+
+@media (min-width: 880px) {
+  /* !important: .burger (mais abaixo neste arquivo) também define
+     display, e como as duas regras têm a mesma especificidade, a ordem
+     no arquivo venceria o empate — não a media query. Isso garantia
+     que o hambúrguer sumisse só em telas estreitas. */
+  .mobileOnly {
+    display: none !important;
+  }
+}
+
+.deskNav {
+  display: none;
+}
+
+@media (min-width: 880px) {
+  .deskNav {
+    display: flex;
+    position: fixed;
+    left: 5vw;
+    top: 32vh;
+    z-index: 45;
+    flex-direction: column;
+  }
+}
+
+.deskList {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.deskLink {
+  display: block;
+  width: 168px;
+  background: none;
+  border: 0;
+  border-bottom: 1px solid rgba(245, 239, 224, 0.16);
+  cursor: pointer;
+  text-align: left;
+  padding: 9px 0;
+  font-size: 14px;
+  letter-spacing: 0.5px;
+  color: rgba(245, 239, 224, 0.75);
+  transition: color 0.3s ease, border-color 0.3s ease;
+}
+
+.deskLink:hover {
+  color: var(--cream);
+  border-color: rgba(201, 162, 75, 0.5);
+}
+
+.deskLinkActive {
+  color: var(--gold-soft);
+  border-color: var(--gold);
+}
+
 .burger {
   position: relative;
   width: 44px;

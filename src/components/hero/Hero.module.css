@@ -234,40 +234,36 @@
 }
 
 .heroCopy {
+  /* a marca do site, monumental, no canto superior esquerdo — mesma
+     coluna onde a lista persistente do Nav (site-desk-nav) continua
+     logo abaixo, uma vez que este bloco já tenha sumido no mergulho */
   position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 9vh;
-  padding: 0 5vw;
+  left: 5vw;
+  top: 6vh;
+  right: 5vw;
   z-index: 5;
-  /* é um bloco de largura total, mas só o texto à esquerda é visível —
-     sem isso a área vazia à direita rouba o hover do canvas por baixo */
   pointer-events: none;
 }
 
 .heroCopy .eyebrow {
-  font-size: 12px;
-  letter-spacing: 2px;
-  color: var(--gold-soft);
-  margin-bottom: 14px;
   display: block;
+  max-width: 32ch;
+  margin-bottom: 16px;
+  font-size: 12px;
+  letter-spacing: 1.5px;
+  color: var(--gold-soft);
 }
 
 .heroCopy h1 {
+  display: flex;
+  flex-direction: column;
   font-family: var(--font-serif), serif;
   font-weight: 500;
-  font-size: clamp(34px, 6vw, 76px);
-  line-height: 1.05;
-  max-width: 14ch;
+  font-size: clamp(40px, 6.4vw, 92px);
+  line-height: 0.94;
+  text-transform: uppercase;
+  letter-spacing: 1px;
   color: var(--cream);
-}
-
-.heroCopy p {
-  margin-top: 18px;
-  max-width: 420px;
-  font-size: 15px;
-  line-height: 1.6;
-  color: #e4dcc6;
 }
 
 .scrollCue {
@@ -315,6 +311,15 @@
   z-index: 5;
   text-align: center;
   pointer-events: none;
+}
+
+@media (max-width: 680px) {
+  /* em telas estreitas essa faixa já está ocupada pela legenda + título
+     gigante da marca; a dica soma pouco (o "passe o mouse" nem se aplica
+     a touch) e o "role para explorar" no rodapé já cobre a intenção */
+  .hint {
+    display: none;
+  }
 }
 
 .introOverlay {

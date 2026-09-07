@@ -16,6 +16,13 @@ import styles from "./Hero.module.css";
 // calibração sobrevive a resize e à troca de obra no meio da sessão.
 const ARTWORKS = [
   {
+    src: "/assets/davinci-cut.png",
+    name: ["Il", "Maestro"],
+    w: 1376,
+    h: 768,
+    door: { x: 0.708, y: 0.742, r: 0.086, zoom: 22 },
+  },
+  {
     src: "/assets/salvator-cut.png",
     name: ["Salvator", "Mundi"],
     w: 1024,
@@ -31,16 +38,14 @@ const ARTWORKS = [
     // do portal cobrir a tela quando o mergulho termina
     door: { x: 0.451, y: 0.34, r: 0.024, zoom: 55 },
   },
-  {
-    src: "/assets/davinci-cut.png",
-    name: ["Il", "Maestro"],
-    w: 1376,
-    h: 768,
-    door: { x: 0.708, y: 0.742, r: 0.086, zoom: 22 },
-  },
 ];
 
-type DoorOnScreen = { xPct: number; yPct: number; radiusVh: number; zoom: number };
+type DoorOnScreen = {
+  xPct: number;
+  yPct: number;
+  radiusVh: number;
+  zoom: number;
+};
 
 // espelha em JS o "cover" centrado que o ArtworkCanvas faz no shader —
 // os dois têm que concordar pixel a pixel pra porta ficar colada na obra
@@ -125,7 +130,13 @@ export default function Hero() {
     gsap.fromTo(
       lines,
       { yPercent: 60, autoAlpha: 0 },
-      { yPercent: 0, autoAlpha: 1, duration: 0.7, stagger: 0.08, ease: "power3.out" },
+      {
+        yPercent: 0,
+        autoAlpha: 1,
+        duration: 0.7,
+        stagger: 0.08,
+        ease: "power3.out",
+      },
     );
   }, [activeIndex]);
 
@@ -143,6 +154,7 @@ export default function Hero() {
     // buscas por texto dentro de heroPinRef, e o nav é irmão dessa seção,
     // não descendente — como string ele nunca seria encontrado.
     const siteNav = document.getElementById("site-nav");
+    const siteDeskNav = document.getElementById("site-desk-nav");
     if (!heroPin || !heroMedia) return;
 
     const ctx = gsap.context(() => {
@@ -227,6 +239,7 @@ export default function Hero() {
               .to(hintRef.current, { autoAlpha: 0 }, 0)
               .to(scrollCueRef.current, { autoAlpha: 0 }, 0)
               .to(siteNav, { autoAlpha: 0 }, 0)
+              .to(siteDeskNav, { autoAlpha: 0 }, 0)
               .to(portalFadeRef.current, { opacity: 1 }, 0.3);
             return;
           }
@@ -251,17 +264,50 @@ export default function Hero() {
               },
             })
             // ATO 1 (0 -> 0.3): a moldura esvazia antes do zoom violento
-            .to(heroCopyRef.current, { autoAlpha: 0, y: -20, ease: "none", duration: 0.3 }, 0)
-            .to(workTitleRef.current, { autoAlpha: 0, y: -16, ease: "none", duration: 0.3 }, 0)
-            .to(workDotsRef.current, { autoAlpha: 0, ease: "none", duration: 0.3 }, 0)
-            .to(hintRef.current, { autoAlpha: 0, ease: "none", duration: 0.3 }, 0)
-            .to(scrollCueRef.current, { autoAlpha: 0, ease: "none", duration: 0.3 }, 0)
+            .to(
+              heroCopyRef.current,
+              { autoAlpha: 0, y: -20, ease: "none", duration: 0.3 },
+              0,
+            )
+            .to(
+              workTitleRef.current,
+              { autoAlpha: 0, y: -16, ease: "none", duration: 0.3 },
+              0,
+            )
+            .to(
+              workDotsRef.current,
+              { autoAlpha: 0, ease: "none", duration: 0.3 },
+              0,
+            )
+            .to(
+              hintRef.current,
+              { autoAlpha: 0, ease: "none", duration: 0.3 },
+              0,
+            )
+            .to(
+              scrollCueRef.current,
+              { autoAlpha: 0, ease: "none", duration: 0.3 },
+              0,
+            )
             .to(siteNav, { autoAlpha: 0, ease: "none", duration: 0.3 }, 0)
-            .to(goldDustRef.current, { autoAlpha: 0, ease: "none", duration: 0.3 }, 0)
+            .to(siteDeskNav, { autoAlpha: 0, ease: "none", duration: 0.3 }, 0)
+            .to(
+              goldDustRef.current,
+              { autoAlpha: 0, ease: "none", duration: 0.3 },
+              0,
+            )
             // o glow incandesce com o início do zoom (mora dentro de
             // heroMedia, cresce junto) e é engolido pelo mergulho
-            .to(orbGlowRef.current, { opacity: 1, ease: "none", duration: 0.15 }, 0.15)
-            .to(orbGlowRef.current, { opacity: 0, ease: "none", duration: 0.2 }, 0.3)
+            .to(
+              orbGlowRef.current,
+              { opacity: 1, ease: "none", duration: 0.15 },
+              0.15,
+            )
+            .to(
+              orbGlowRef.current,
+              { opacity: 0, ease: "none", duration: 0.2 },
+              0.3,
+            )
             // ATO 2 (0.15 -> 1): mergulho na porta da obra ATIVA — a
             // mesma porta dirige o scale, a origem e o raio da janela,
             // então a borda nunca desalinha do orbe/olho/códice
@@ -272,7 +318,9 @@ export default function Hero() {
                 ease: "power2.in",
                 duration: 0.85,
                 onUpdate: () => {
-                  const door = getDoorOnScreen(ARTWORKS[activeIndexRef.current]);
+                  const door = getDoorOnScreen(
+                    ARTWORKS[activeIndexRef.current],
+                  );
                   const z = 1 + (door.zoom - 1) * progState.p;
                   gsap.set(heroMedia, {
                     scale: z,
@@ -297,8 +345,16 @@ export default function Hero() {
             // ATO 4 (0.5 -> 1): a passagem pela cor do vidro — o véu
             // azul-acinzentado sobe no meio do mergulho e se dissolve
             // exatamente quando o pin solta, no céu do Batismo
-            .to(portalFadeRef.current, { opacity: 0.55, ease: "none", duration: 0.2 }, 0.5)
-            .to(portalFadeRef.current, { opacity: 0, ease: "none", duration: 0.3 }, 0.7);
+            .to(
+              portalFadeRef.current,
+              { opacity: 0.55, ease: "none", duration: 0.2 },
+              0.5,
+            )
+            .to(
+              portalFadeRef.current,
+              { opacity: 0, ease: "none", duration: 0.3 },
+              0.7,
+            );
         },
       );
 
@@ -322,10 +378,24 @@ export default function Hero() {
           aria-hidden="true"
         >
           {GRID_V.map((x) => (
-            <line key={`v${x}`} x1={x} y1={0} x2={x} y2={100} vectorEffect="non-scaling-stroke" />
+            <line
+              key={`v${x}`}
+              x1={x}
+              y1={0}
+              x2={x}
+              y2={100}
+              vectorEffect="non-scaling-stroke"
+            />
           ))}
           {GRID_H.map((y) => (
-            <line key={`h${y}`} x1={0} y1={y} x2={100} y2={y} vectorEffect="non-scaling-stroke" />
+            <line
+              key={`h${y}`}
+              x1={0}
+              y1={y}
+              x2={100}
+              y2={y}
+              vectorEffect="non-scaling-stroke"
+            />
           ))}
         </svg>
         {CROSSHAIRS.map(([x, y]) => (
@@ -350,9 +420,17 @@ export default function Hero() {
         {/* estudos em traço branco nas margens, fundidos por screen
             (linhas brancas sobre preto — só o traço sobrevive) */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img className={`${styles.sketch} ${styles.sketchFlyer}`} src="/assets/sketch-flyer.jpg" alt="" />
+        <img
+          className={`${styles.sketch} ${styles.sketchFlyer}`}
+          src="/assets/sketch-flyer.jpg"
+          alt=""
+        />
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img className={`${styles.sketch} ${styles.sketchVitruvian}`} src="/assets/sketch-vitruvian.jpg" alt="" />
+        <img
+          className={`${styles.sketch} ${styles.sketchVitruvian}`}
+          src="/assets/sketch-vitruvian.jpg"
+          alt=""
+        />
 
         <ArtworkCanvas
           ref={canvasHandleRef}
@@ -374,7 +452,11 @@ export default function Hero() {
       {/* janela do portal: clip-path circle crescendo sobre o quadro em
           repouso da BatismoSection — fica fora de heroMedia (não herda o
           scale) porque o próprio raio já é animado em sincronia */}
-      <div className={styles.portalReveal} ref={portalRevealRef} role="presentation">
+      <div
+        className={styles.portalReveal}
+        ref={portalRevealRef}
+        role="presentation"
+      >
         <div className={styles.portalRevealMedia}>
           <Image
             src="/assets/batismo-cristo.jpg"
@@ -396,18 +478,23 @@ export default function Hero() {
         passe o mouse sobre a obra pra trocar — role pra atravessar a porta
       </p>
 
+      {/* a marca do site vira o título monumental do hero — mesma coluna
+          esquerda onde a lista persistente do Nav (site-desk-nav) continua
+          depois que este bloco some no mergulho de scroll */}
       <div className={styles.heroCopy} ref={heroCopyRef}>
-        <span className={styles.eyebrow}>Uma experiência imersiva</span>
-        <h1>Onde a luz encontra a eternidade</h1>
-        <p>
-          As obras-primas de Leonardo da Vinci, reveladas camada por camada — da
-          geometria ao gesto final.
-        </p>
+        <span className={styles.eyebrow}>
+          Uma experiência imersiva pela obra de Leonardo da Vinci
+        </span>
+        <h1>
+          <span>Da Vinci</span>
+          <span>Immersive</span>
+        </h1>
       </div>
 
       <div className={styles.workTitle} ref={workTitleRef}>
         <span className={styles.workCount}>
-          obra {String(activeIndex + 1).padStart(2, "0")} / {String(ARTWORKS.length).padStart(2, "0")}
+          obra {String(activeIndex + 1).padStart(2, "0")} /{" "}
+          {String(ARTWORKS.length).padStart(2, "0")}
         </span>
         <h2>
           {ARTWORKS[activeIndex].name.map((line) => (
@@ -424,7 +511,9 @@ export default function Hero() {
             key={artwork.src}
             type="button"
             aria-label={`Ver ${artwork.name.join(" ")}`}
-            className={i === activeIndex ? styles.workDotActive : styles.workDot}
+            className={
+              i === activeIndex ? styles.workDotActive : styles.workDot
+            }
             onClick={() => canvasHandleRef.current?.goTo(i)}
           />
         ))}

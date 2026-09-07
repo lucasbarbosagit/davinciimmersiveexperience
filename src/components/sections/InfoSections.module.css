@@ -8,6 +8,15 @@
   overflow: hidden;
 }
 
+@media (min-width: 880px) {
+  /* a lista persistente do Nav mora fixa em left:5vw, ~168px de largura —
+     esse respiro evita que ela passe por cima do início de cada título
+     enquanto a seção atravessa a faixa vertical onde ela vive */
+  .infoSection {
+    padding-left: max(8vw, 300px);
+  }
+}
+
 .eyebrow {
   font-size: 12px;
   letter-spacing: 2px;

@@ -18,6 +18,7 @@ export default function BatismoSection() {
     // getElementById, não string de seletor: gsap.context() escopa buscas
     // por texto dentro de sectionRef, e o nav é irmão, não descendente.
     const siteNav = document.getElementById("site-nav");
+    const siteDeskNav = document.getElementById("site-desk-nav");
     if (!section || !media || !tint) return;
 
     const ctx = gsap.context(() => {
@@ -48,7 +49,8 @@ export default function BatismoSection() {
           0,
         )
         .to(tint, { opacity: 0, ease: "none" }, 0)
-        .to(siteNav, { autoAlpha: 1, ease: "none" }, 0.3);
+        .to(siteNav, { autoAlpha: 1, ease: "none" }, 0.3)
+        .to(siteDeskNav, { autoAlpha: 1, ease: "none" }, 0.3);
     }, sectionRef);
 
     return () => ctx.revert();

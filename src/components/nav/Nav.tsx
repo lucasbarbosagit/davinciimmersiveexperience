@@ -18,12 +18,16 @@ const MENU_ITEMS = [
 
 export default function Nav() {
   const [open, setOpen] = useState(false);
+  const [active, setActive] = useState("#hero");
   const overlayRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<(HTMLLIElement | null)[]>([]);
   const metaRef = useRef<HTMLDivElement>(null);
   const tlRef = useRef<gsap.core.Timeline | null>(null);
   const lenis = useLenis();
 
+  // menu overlay em tela cheia — só existe pra viewports estreitos, onde
+  // a lista persistente da esquerda não cabe (ver .deskNav / .mobileOnly
+  // em Nav.module.css)
   useIsomorphicLayoutEffect(() => {
     const overlay = overlayRef.current;
     if (!overlay) return;
@@ -72,6 +76,30 @@ export default function Nav() {
     return () => window.removeEventListener("keydown", onKey);
   }, [open]);
 
+  // destaca o capítulo atual na lista persistente: observa uma faixa
+  // fina no meio da tela, não o topo/fundo inteiro, pra trocar exatamente
+  // quando o capítulo domina a vista, não no instante em que aparece
+  useEffect(() => {
+    const targets = MENU_ITEMS.map((item) =>
+      document.querySelector(item.target),
+    ).filter((el): el is Element => Boolean(el));
+    if (targets.length === 0) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries.filter((e) => e.isIntersecting);
+        if (visible.length === 0) return;
+        const topMost = visible.reduce((a, b) =>
+          a.boundingClientRect.top < b.boundingClientRect.top ? a : b,
+        );
+        setActive(`#${topMost.target.id}`);
+      },
+      { rootMargin: "-45% 0px -45% 0px", threshold: 0 },
+    );
+    targets.forEach((el) => observer.observe(el));
+    return () => observer.disconnect();
+  }, []);
+
   const goTo = (target: string) => {
     setOpen(false);
     // start() ANTES do scrollTo: o efeito de [open] só retoma o lenis
@@ -84,18 +112,18 @@ export default function Nav() {
     <>
       {/* o id site-nav é alvo dos timelines de Hero/Batismo (fade da
           barra durante o mergulho) — o overlay fica fora dele de
-          propósito, pra não herdar nem o fade nem o blend difference */}
+          propósito, pra não herdar nem o fade nem o blend difference.
+          Em telas largas só o CTA sobrevive aqui: marca e links moram
+          na lista persistente (.deskNav) e no burger some (.mobileOnly) */}
       <nav
         id="site-nav"
-        className="fixed inset-x-0 top-0 z-50 flex items-center justify-between px-[5vw] py-7 mix-blend-difference"
+        className="fixed inset-x-0 top-0 z-50 flex items-center justify-end px-[5vw] py-7 mix-blend-difference"
       >
-        <button
-          type="button"
-          className="cursor-pointer border-0 bg-transparent p-0 font-[family-name:var(--font-serif)] text-[19px] tracking-[2px] text-[var(--cream)]"
-          onClick={() => goTo("#hero")}
-        >
-          Il Rinascimento
-        </button>
+        {/* sem wordmark aqui: em telas largas a marca mora na lista
+            persistente (site-desk-nav); em telas estreitas mora no
+            próprio título gigante do hero, e "Início" no overlay do
+            hambúrguer já cobre o "voltar ao topo" — duplicar o nome
+            pequeno aqui só brigava com o título grande por espaço */}
         <div className="flex items-center gap-7">
           <button
             type="button"
@@ -106,7 +134,7 @@ export default function Nav() {
           </button>
           <button
             type="button"
-            className={`${styles.burger} ${open ? styles.burgerOpen : ""}`}
+            className={`${styles.mobileOnly} ${styles.burger} ${open ? styles.burgerOpen : ""}`}
             aria-expanded={open}
             aria-label={open ? "Fechar menu" : "Abrir menu"}
             onClick={() => setOpen((v) => !v)}
@@ -116,6 +144,25 @@ export default function Nav() {
           </button>
         </div>
       </nav>
+
+      {/* lista persistente à esquerda — visível em telas largas, no lugar
+          do hambúrguer; mesmo id alvo dos fades de Hero/Batismo durante
+          o mergulho de scroll (some junto com o resto do chrome) */}
+      <div id="site-desk-nav" className={styles.deskNav}>
+        <ul className={styles.deskList}>
+          {MENU_ITEMS.map((item) => (
+            <li key={item.target}>
+              <button
+                type="button"
+                className={`${styles.deskLink} ${active === item.target ? styles.deskLinkActive : ""}`}
+                onClick={() => goTo(item.target)}
+              >
+                {item.label}
+              </button>
+            </li>
+          ))}
+        </ul>
+      </div>
 
       <div className={styles.overlay} ref={overlayRef} aria-hidden={!open}>
         <ul className={styles.menuList}>
