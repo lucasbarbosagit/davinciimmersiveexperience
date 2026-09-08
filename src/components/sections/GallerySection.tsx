@@ -4,6 +4,7 @@ import { useRef } from "react";
 import * as THREE from "three";
 import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
 import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
+import { SSAOPass } from "three/addons/postprocessing/SSAOPass.js";
 import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 import { gsap, ScrollTrigger } from "@/lib/gsap";
@@ -87,50 +88,63 @@ const UPV = new THREE.Vector3(0, 1, 0);
 const workZ = (i: number) => FIRST_Z - i * SPACING_Z;
 const EXIT_Z = workZ(GALLERY_WORKS.length - 1) - 7;
 
-// textura procedural das paredes: painel ranhurado (fluted panel) com um
-// friso dourado em cada emenda — mais barato que modelar centenas de
-// sulcos como geometria, e ilegível a essa distância a diferença não
-// existe
-function makeFlutedTexture(): THREE.CanvasTexture {
-  const canvas = document.createElement("canvas");
-  canvas.width = 256;
-  canvas.height = 512;
-  const ctx = canvas.getContext("2d")!;
-  ctx.fillStyle = "#15110b";
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+// textura procedural das paredes: painel ranhurado (fluted panel), cor
+// E relevo (normal map) derivados do mesmo perfil analítico de sulco —
+// é o relevo de verdade (reagindo à luz de cada spot) que faz a parede
+// ler como arquitetura, não como uma textura pintada por cima de um
+// plano chapado. Mais barato que modelar os sulcos como geometria, e a
+// essa distância a diferença de silhueta não existe.
+function makeFlutedMaps(): { map: THREE.CanvasTexture; normalMap: THREE.CanvasTexture } {
+  const W = 512;
+  const H = 8;
+  const flutes = 18;
+  const fw = W / flutes;
 
-  const flutes = 16;
-  const fw = canvas.width / flutes;
-  for (let i = 0; i < flutes; i++) {
-    const grad = ctx.createLinearGradient(i * fw, 0, (i + 1) * fw, 0);
-    grad.addColorStop(0, "rgba(0,0,0,0.35)");
-    grad.addColorStop(0.5, "rgba(255,244,220,0.07)");
-    grad.addColorStop(1, "rgba(0,0,0,0.35)");
-    ctx.fillStyle = grad;
-    ctx.fillRect(i * fw, 0, fw, canvas.height);
+  const colorCanvas = document.createElement("canvas");
+  colorCanvas.width = W;
+  colorCanvas.height = H;
+  const cctx = colorCanvas.getContext("2d")!;
+
+  const normalCanvas = document.createElement("canvas");
+  normalCanvas.width = W;
+  normalCanvas.height = H;
+  const nctx = normalCanvas.getContext("2d")!;
+
+  for (let x = 0; x < W; x++) {
+    const local = (x % fw) / fw;
+    // perfil côncavo do sulco: pico (0/1) nas emendas, vale no meio —
+    // a derivada desse mesmo cosseno vira a inclinação usada no normal map
+    const slope = -Math.sin(local * Math.PI * 2);
+    const shade = Math.cos(local * Math.PI * 2); // +1 na emenda, -1 no fundo do vale
+
+    // cor: cinza-chumbo neutro e frio (não mais sépia quente) — só o
+    // relevo dá variação, a cor em si é quase plana
+    const base = 22 + shade * 7;
+    cctx.fillStyle = `rgb(${base}, ${base + 1}, ${base + 3})`;
+    cctx.fillRect(x, 0, 1, H);
+
+    // normal map: inclinação só no eixo X (sulcos verticais), Z sempre
+    // dominante — força do relevo moderada pra não parecer plástico
+    const nStrength = 0.55;
+    const nx = slope * nStrength;
+    const nz = Math.sqrt(Math.max(0, 1 - nx * nx));
+    const r = Math.round((nx * 0.5 + 0.5) * 255);
+    const g = 128;
+    const b = Math.round(nz * 255);
+    nctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
+    nctx.fillRect(x, 0, 1, H);
   }
 
-  ctx.strokeStyle = "rgba(201,162,75,0.32)";
-  ctx.lineWidth = 1;
-  for (let i = 0; i <= flutes; i++) {
-    ctx.beginPath();
-    ctx.moveTo(i * fw, 0);
-    ctx.lineTo(i * fw, canvas.height);
-    ctx.stroke();
-  }
+  const map = new THREE.CanvasTexture(colorCanvas);
+  map.wrapS = THREE.RepeatWrapping;
+  map.wrapT = THREE.ClampToEdgeWrapping;
+  map.colorSpace = THREE.SRGBColorSpace;
 
-  ctx.strokeStyle = "rgba(201,162,75,0.16)";
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(0, canvas.height * 0.72);
-  ctx.lineTo(canvas.width, canvas.height * 0.72);
-  ctx.stroke();
+  const normalMap = new THREE.CanvasTexture(normalCanvas);
+  normalMap.wrapS = THREE.RepeatWrapping;
+  normalMap.wrapT = THREE.ClampToEdgeWrapping;
 
-  const tex = new THREE.CanvasTexture(canvas);
-  tex.wrapS = THREE.RepeatWrapping;
-  tex.wrapT = THREE.ClampToEdgeWrapping;
-  tex.colorSpace = THREE.SRGBColorSpace;
-  return tex;
+  return { map, normalMap };
 }
 
 export default function GallerySection() {
@@ -152,7 +166,7 @@ export default function GallerySection() {
 
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.setClearColor(0x0b0a07, 1);
+    renderer.setClearColor(0x0a0a0c, 1);
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.15;
     container.appendChild(renderer.domElement);
@@ -163,12 +177,36 @@ export default function GallerySection() {
     const camera = new THREE.PerspectiveCamera(55, 1, 0.1, 100);
 
     const scene = new THREE.Scene();
-    scene.fog = new THREE.Fog(0x0b0a07, 7, 30);
-    scene.add(new THREE.AmbientLight(0x4a3f2c, 3.2));
-    // luz difusa geral do corredor (teto mais quente, chão mais escuro) —
+    scene.fog = new THREE.Fog(0x0a0a0c, 7, 30);
+    // paleta neutra e fria (a referência é cinza-chumbo, não sépia) — o
+    // dourado fica reservado aos acentos (filete, spots, moldura)
+    scene.add(new THREE.AmbientLight(0x3a3c42, 3.2));
+    // luz difusa geral do corredor (teto mais claro, chão mais escuro) —
     // sem ela só sobra o poço de luz de cada spot cercado de vazio: um
     // museu de verdade tem uma iluminação ambiente de fundo também
-    scene.add(new THREE.HemisphereLight(0x6b5a3a, 0x0a0806, 2.4));
+    scene.add(new THREE.HemisphereLight(0x50525a, 0x08080a, 2.4));
+
+    // ambiente PMREM simples (um gradiente, não uma foto real): dá às
+    // superfícies metalizadas/polidas (piso, parede) um brilho de reflexo
+    // sutil sem precisar de um espelho de verdade — o que a referência
+    // resolve com path-tracing, aqui é só um sheen barato e plausível
+    const pmrem = new THREE.PMREMGenerator(renderer);
+    const envCanvas = document.createElement("canvas");
+    envCanvas.width = 8;
+    envCanvas.height = 128;
+    const envCtx = envCanvas.getContext("2d")!;
+    const envGrad = envCtx.createLinearGradient(0, 0, 0, envCanvas.height);
+    envGrad.addColorStop(0, "#3a3d44");
+    envGrad.addColorStop(0.45, "#141519");
+    envGrad.addColorStop(1, "#020203");
+    envCtx.fillStyle = envGrad;
+    envCtx.fillRect(0, 0, envCanvas.width, envCanvas.height);
+    const envSourceTex = new THREE.CanvasTexture(envCanvas);
+    envSourceTex.mapping = THREE.EquirectangularReflectionMapping;
+    envSourceTex.colorSpace = THREE.SRGBColorSpace;
+    const envRT = pmrem.fromEquirectangular(envSourceTex);
+    scene.environment = envRT.texture;
+    envSourceTex.dispose();
 
     // --- a espinha do corredor: uma curva em S passando por todas as
     // obras, não mais uma linha reta. Cada obra vira um ponto de controle
@@ -276,23 +314,37 @@ export default function GallerySection() {
       1,
       totalLen,
     );
+    // trilho contínuo de luz no teto (canaleta escura embutida) — a
+    // referência não ilumina cada quadro com uma luminária isolada
+    // flutuando no meio da sala, e sim um trilho corrido de museu
+    const trackGeo = buildRibbon(
+      (i) => edgeAt(i, -0.16, CEIL_Y - 0.06),
+      (i) => edgeAt(i, 0.16, CEIL_Y - 0.06),
+      1,
+      totalLen,
+    );
 
-    const flutedTex = makeFlutedTexture();
+    const { map: flutedTex, normalMap: flutedNormal } = makeFlutedMaps();
     const wallMat = new THREE.MeshStandardMaterial({
       map: flutedTex,
-      roughness: 0.85,
-      metalness: 0.08,
+      normalMap: flutedNormal,
+      normalScale: new THREE.Vector2(1, 1),
+      roughness: 0.72,
+      metalness: 0.12,
+      envMapIntensity: 0.6,
       side: THREE.DoubleSide,
     });
     const floorMat = new THREE.MeshStandardMaterial({
-      color: 0x0f0d09,
-      roughness: 0.32,
-      metalness: 0.25,
+      color: 0x121317,
+      roughness: 0.22,
+      metalness: 0.35,
+      envMapIntensity: 1.1,
       side: THREE.DoubleSide,
     });
     const ceilMat = new THREE.MeshStandardMaterial({
-      color: 0x100d09,
-      roughness: 0.95,
+      color: 0x121317,
+      roughness: 0.9,
+      envMapIntensity: 0.4,
       side: THREE.DoubleSide,
     });
     const lineMat = new THREE.MeshBasicMaterial({ color: 0xd9bc7a });
@@ -305,12 +357,35 @@ export default function GallerySection() {
       depthWrite: false,
     });
     lineHaloMat.fog = false;
+    const trackMat = new THREE.MeshStandardMaterial({
+      color: 0x0a0a0c,
+      roughness: 0.3,
+      metalness: 0.8,
+      envMapIntensity: 1.4,
+      side: THREE.DoubleSide,
+    });
 
     scene.add(new THREE.Mesh(floorGeo, floorMat));
     scene.add(new THREE.Mesh(ceilGeo, ceilMat));
     scene.add(new THREE.Mesh(leftWallGeo, wallMat));
     scene.add(new THREE.Mesh(rightWallGeo, wallMat));
+    scene.add(new THREE.Mesh(trackGeo, trackMat));
     scene.add(new THREE.Mesh(lineGeo, lineMat));
+
+    // fileira de pequenos downlights embutidos no trilho, regularmente
+    // espaçados — o que faz o teto ler como uma instalação de museu de
+    // verdade em vez de um ponto de luz isolado por quadro
+    const downlightGeo = new THREE.CircleGeometry(0.09, 16);
+    const downlightMat = new THREE.MeshBasicMaterial({ color: 0xfbe8bd });
+    downlightMat.fog = false;
+    const DOWNLIGHT_STEP = 14;
+    for (let i = 0; i <= SAMPLES; i += DOWNLIGHT_STEP) {
+      const p = samplePts[i];
+      const dl = new THREE.Mesh(downlightGeo, downlightMat);
+      dl.position.set(p.x, CEIL_Y - 0.061, p.z);
+      dl.rotation.x = Math.PI / 2;
+      scene.add(dl);
+    }
     scene.add(new THREE.Mesh(lineHaloGeo, lineHaloMat));
 
     // uma brasa dourada bem no fundo do corredor — o "ainda tem mais luz
@@ -345,15 +420,6 @@ export default function GallerySection() {
       roughness: 0.4,
       metalness: 0.6,
     });
-    const beamMat = new THREE.MeshBasicMaterial({
-      color: 0xf3d9a4,
-      transparent: true,
-      opacity: 0.03,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false,
-      side: THREE.DoubleSide,
-    });
-    beamMat.fog = false;
 
     // busca por amostragem o parâmetro de arco (0-1, o mesmo que o
     // progresso do scroll usa) mais próximo de um ponto 3D dado — usado
@@ -419,26 +485,17 @@ export default function GallerySection() {
       const art = new THREE.Mesh(new THREE.PlaneGeometry(frameW, frameH), artMat);
       group.add(art);
 
-      // trilho de museu real: fixture + feixe cônico translúcido são só
-      // cosméticos — quem ilumina de fato é o SpotLight, com cone e
-      // penumbra de verdade em vez do PointLight difuso da versão anterior
-      const fixtureY = frameH / 2 + 0.9;
-      const fixture = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.12, 0.22, 10), fixtureMat);
-      fixture.position.set(0, fixtureY, 1.5);
+      // luminária discreta embutida perto do teto — sem feixe cônico
+      // visível: a referência não tem um "raio de luz" no ar, só a
+      // fixture e o poço de luz que ela projeta na parede/quadro
+      const fixtureY = Math.min(CEIL_Y - 0.15, frameH / 2 + 0.85);
+      const fixture = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.1, 0.16, 12), fixtureMat);
+      fixture.position.set(0, fixtureY, 0.9);
       fixture.rotation.x = Math.PI;
       group.add(fixture);
-
-      const beamHeight = fixtureY - (frameH / 2 - 0.1);
-      const beam = new THREE.Mesh(
-        new THREE.ConeGeometry(0.42, beamHeight, 20, 1, true),
-        beamMat,
-      );
-      beam.position.set(0, fixtureY - beamHeight / 2, 1.15);
-      group.add(beam);
       disposables.push({
         dispose: () => {
           fixture.geometry.dispose();
-          beam.geometry.dispose();
         },
       });
 
@@ -447,23 +504,29 @@ export default function GallerySection() {
       group.add(spotTarget);
       const spot = new THREE.SpotLight(
         0xffdca8,
-        56 * work.lightMul,
+        42 * work.lightMul,
         16,
-        THREE.MathUtils.degToRad(40),
-        0.7,
+        THREE.MathUtils.degToRad(42),
+        0.75,
         1,
       );
-      spot.position.set(0, fixtureY, 1.5);
+      spot.position.set(0, fixtureY, 0.9);
       spot.target = spotTarget;
       group.add(spot);
 
       peaks[i] = findArcT(centerPt);
       paintingLookTargets[i] = group.position.clone();
-      const anchorLocal = new THREE.Vector3(-(frameW / 2 + 1.0), 0, 0.15);
-      placardAnchors[i] = anchorLocal
-        .clone()
-        .applyAxisAngle(UPV, group.rotation.y)
-        .add(group.position);
+      // âncora da placa: o próprio centro do quadro, não um ponto
+      // deslocado ao lado dele. Deslocar em espaço de mundo (por tangent/
+      // right, ou girando um vetor local pela rotation.y do grupo) virou
+      // uma sucessão de casos-de-borda diferentes por obra — cada uma
+      // tem seu próprio heading local, e um deslocamento que funciona
+      // numa vira a câmera pelas costas na outra. O quadro em si SEMPRE
+      // está na frente da câmera (é o que a cena renderiza), então usar
+      // o centro dele é a âncora robusta; o afastamento visual da placa
+      // em relação ao quadro é feito depois, em pixels de tela, não em
+      // metros de mundo
+      placardAnchors[i] = group.position.clone();
     });
 
     let width = 1;
@@ -471,6 +534,14 @@ export default function GallerySection() {
 
     const composer = new EffectComposer(renderer);
     composer.addPass(new RenderPass(scene, camera));
+    // sombra de contato (SSAO): é o que faz o chão/parede grudar no
+    // objeto em vez de flutuar sob luz plana — sem isso nenhuma
+    // quantidade de spot deixa a cena "presa ao chão" como a referência
+    const ssaoPass = new SSAOPass(scene, camera, 1, 1, 12);
+    ssaoPass.kernelRadius = 0.4;
+    ssaoPass.minDistance = 0.001;
+    ssaoPass.maxDistance = 0.08;
+    composer.addPass(ssaoPass);
     // bloom conservador: só os acentos dourados (filete, brasa, feixes de
     // luz) passam do limiar — a intenção é o brilho de um museu de
     // verdade, não estourar o branco das próprias telas
@@ -487,6 +558,9 @@ export default function GallerySection() {
       composer.setSize(width, height);
       composer.setPixelRatio(renderer.getPixelRatio());
       bloomPass.setSize(width, height);
+      // SSAO em resolução cheia é caro demais pro ganho visual — meia
+      // resolução (borrada em seguida pelo próprio pass) já basta
+      ssaoPass.setSize(Math.round(width / 2), Math.round(height / 2));
     }
     const resizeObserver = new ResizeObserver(resize);
     resizeObserver.observe(container);
@@ -534,6 +608,14 @@ export default function GallerySection() {
         lookTarget.lerp(paintingLookTargets[nearestIdx], w);
       }
       camera.lookAt(lookTarget);
+      // sem isso, matrixWorld/matrixWorldInverse só são recalculados
+      // dentro do PRÓXIMO renderer.render() — .project(camera) logo
+      // abaixo usaria a câmera de UM FRAME ATRÁS (posição/rotação já
+      // novas, matriz ainda velha), projetando a âncora como se a
+      // câmera ainda estivesse na pose anterior. É esse descompasso,
+      // não a geometria em si, que fazia a placa parecer "atrás" da
+      // câmera bem nos instantes em que ela girava mais rápido
+      camera.updateMatrixWorld();
 
       captions.forEach((el, i) => {
         if (!el) return;
@@ -548,7 +630,10 @@ export default function GallerySection() {
           el.style.opacity = "0";
           return;
         }
-        const px = (ndc.x * 0.5 + 0.5) * width;
+        // ancorado no centro do quadro em 3D, mas separado dele em
+        // PIXELS de tela (não em metros de mundo) — o afastamento visual
+        // não depende então de quão perto/zoom a câmera está do quadro
+        const px = (ndc.x * 0.5 + 0.5) * width - 90;
         const py = (1 - (ndc.y * 0.5 + 0.5)) * height;
         el.style.opacity = String(opacity);
         el.style.transform = `translate(${px}px, ${py}px) translate(-100%, -50%)`;
@@ -590,11 +675,16 @@ export default function GallerySection() {
       lineMat.dispose();
       lineHaloMat.dispose();
       flutedTex.dispose();
+      flutedNormal.dispose();
       frameMat.dispose();
       fixtureMat.dispose();
-      beamMat.dispose();
+      trackMat.dispose();
+      downlightMat.dispose();
       archMat.dispose();
+      envRT.dispose();
+      pmrem.dispose();
       disposables.forEach((d) => d.dispose());
+      ssaoPass.dispose();
       bloomPass.dispose();
       composer.dispose();
       renderer.dispose();
