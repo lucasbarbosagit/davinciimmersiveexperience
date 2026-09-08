@@ -41,7 +41,13 @@ export default function Nav() {
       .fromTo(
         items,
         { y: 46, autoAlpha: 0 },
-        { y: 0, autoAlpha: 1, duration: 0.55, stagger: 0.07, ease: "power3.out" },
+        {
+          y: 0,
+          autoAlpha: 1,
+          duration: 0.55,
+          stagger: 0.07,
+          ease: "power3.out",
+        },
         0.12,
       )
       .fromTo(
@@ -128,13 +134,6 @@ export default function Nav() {
         <div className="flex items-center gap-7">
           <button
             type="button"
-            className="hidden cursor-pointer rounded-full border border-[var(--gold)] px-[22px] py-[10px] text-[12px] tracking-[0.5px] text-[var(--gold-soft)] sm:inline-block"
-            onClick={() => goTo("#visitar")}
-          >
-            Reservar visita
-          </button>
-          <button
-            type="button"
             className={`${styles.mobileOnly} ${styles.burger} ${open ? styles.burgerOpen : ""}`}
             aria-expanded={open}
             aria-label={open ? "Fechar menu" : "Abrir menu"}
@@ -188,14 +187,6 @@ export default function Nav() {
         </ul>
         <div className={styles.menuMeta} ref={metaRef}>
           <span>Uma jornada imersiva pela obra de Leonardo da Vinci</span>
-          <button
-            type="button"
-            className={styles.menuCta}
-            onClick={() => goTo("#visitar")}
-            tabIndex={open ? 0 : -1}
-          >
-            Reservar visita
-          </button>
         </div>
       </div>
     </>

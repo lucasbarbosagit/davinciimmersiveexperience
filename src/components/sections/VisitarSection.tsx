@@ -54,7 +54,7 @@ export default function VisitarSection() {
         <div className={styles.visitCol} data-reveal>
           <h3>Bilhetes</h3>
           <p>
-            a partir de €18
+            a partir de R$50,00
             <br />
             gratuito até 12 anos
             <br />
@@ -62,9 +62,6 @@ export default function VisitarSection() {
           </p>
         </div>
       </div>
-      <button type="button" className={styles.visitCta} data-reveal>
-        Reservar visita
-      </button>
     </section>
   );
 }

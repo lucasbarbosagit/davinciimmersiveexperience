@@ -422,13 +422,13 @@ export default function Hero() {
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           className={`${styles.sketch} ${styles.sketchFlyer}`}
-          src="/assets/sketch-flyer.jpg"
+          src="/assets/sketch-flyer.png"
           alt=""
         />
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           className={`${styles.sketch} ${styles.sketchVitruvian}`}
-          src="/assets/sketch-vitruvian.jpg"
+          src="/assets/sketch-vitruvian.png"
           alt=""
         />
 
