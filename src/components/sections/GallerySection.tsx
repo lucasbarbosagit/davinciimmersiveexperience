@@ -83,6 +83,15 @@ const SAMPLES = 220;
 const PANEL_PERIOD = 2.3;
 const LINE_HALF_W = 0.045;
 const LINE_HALO_HALF_W = 0.16;
+// "andar e parar": a caminhada não avança em velocidade constante — perto
+// de cada obra o tempo (progresso de scroll) rende bem menos distância
+// percorrida na curva, como alguém que chega, para e observa, antes de
+// seguir depressa até a próxima. DWELL_SIGMA é a largura (em t de arco,
+// 0-1) da janela de desaceleração ao redor de cada obra; DWELL_STRENGTH
+// é o quanto mais devagar o tempo passa bem no auge dela
+const DWELL_SIGMA = 0.032;
+const DWELL_STRENGTH = 3.4;
+const WARP_SAMPLES = 800;
 const UPV = new THREE.Vector3(0, 1, 0);
 
 const workZ = (i: number) => FIRST_Z - i * SPACING_Z;
@@ -169,6 +178,12 @@ export default function GallerySection() {
     renderer.setClearColor(0x0a0a0c, 1);
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.15;
+    // sombra de verdade (mapa, não só SSAO de contato): é o que faz o
+    // pedestal "pesar" no chão e o quadro se destacar da parede em vez de
+    // flutuar sob luz plana — soft shadow map porque a referência tem
+    // penumbra suave, não uma sombra dura de recorte
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     container.appendChild(renderer.domElement);
     renderer.domElement.style.width = "100%";
     renderer.domElement.style.height = "100%";
@@ -365,10 +380,18 @@ export default function GallerySection() {
       side: THREE.DoubleSide,
     });
 
-    scene.add(new THREE.Mesh(floorGeo, floorMat));
-    scene.add(new THREE.Mesh(ceilGeo, ceilMat));
-    scene.add(new THREE.Mesh(leftWallGeo, wallMat));
-    scene.add(new THREE.Mesh(rightWallGeo, wallMat));
+    const floorMesh = new THREE.Mesh(floorGeo, floorMat);
+    floorMesh.receiveShadow = true;
+    scene.add(floorMesh);
+    const ceilMesh = new THREE.Mesh(ceilGeo, ceilMat);
+    ceilMesh.receiveShadow = true;
+    scene.add(ceilMesh);
+    const leftWallMesh = new THREE.Mesh(leftWallGeo, wallMat);
+    leftWallMesh.receiveShadow = true;
+    scene.add(leftWallMesh);
+    const rightWallMesh = new THREE.Mesh(rightWallGeo, wallMat);
+    rightWallMesh.receiveShadow = true;
+    scene.add(rightWallMesh);
     scene.add(new THREE.Mesh(trackGeo, trackMat));
     scene.add(new THREE.Mesh(lineGeo, lineMat));
 
@@ -420,6 +443,22 @@ export default function GallerySection() {
       roughness: 0.4,
       metalness: 0.6,
     });
+    // o pedestal: mesma pedra fosca do chão, só um pouco mais clara pra
+    // não sumir contra ele — é o que ancora a obra no espaço em vez de
+    // deixá-la flutuando isolada na parede, igual à referência
+    const pedestalMat = new THREE.MeshStandardMaterial({
+      color: 0x1c1d22,
+      roughness: 0.78,
+      metalness: 0.04,
+      envMapIntensity: 0.3,
+    });
+    // sem luz, cor chapada — igual a TODO outro acento dourado da cena
+    // (filete do chão, halo, arco de saída). Um metal de verdade tão
+    // perto do spot vira hotspot especular que o bloom espalha numa
+    // coluna vertical de luz no ar — o exato "raio" que já tinha sido
+    // removido antes; unlit evita reintroduzir o mesmo bug por outra via
+    const pedestalTrimMat = new THREE.MeshBasicMaterial({ color: 0xc9a24b });
+    pedestalTrimMat.fog = false;
 
     // busca por amostragem o parâmetro de arco (0-1, o mesmo que o
     // progresso do scroll usa) mais próximo de um ponto 3D dado — usado
@@ -475,6 +514,13 @@ export default function GallerySection() {
         frameMat,
       );
       backing.position.z = -0.04;
+      // NÃO cast shadow: a moldura fica quase coplanar com a própria
+      // parede atrás dela (a mesma faixa que ela recebe sombra) — deixar
+      // as duas trocarem sombra a essa distância quase nula é receita
+      // pra shadow acne, que virou uma coluna de luz vazando através do
+      // bloom. Só o pedestal (bem separado da parede) precisa projetar
+      // sombra de verdade
+      backing.receiveShadow = true;
       group.add(backing);
 
       const texture = loader.load(work.src);
@@ -484,6 +530,31 @@ export default function GallerySection() {
       disposables.push(artMat);
       const art = new THREE.Mesh(new THREE.PlaneGeometry(frameW, frameH), artMat);
       group.add(art);
+
+      // pedestal de museu: uma base baixa e sólida encostada na parede,
+      // logo abaixo do quadro, com um filete de latão na borda de cima —
+      // sem ele o quadro fica "colado" na parede vazia; com ele a obra
+      // ganha um chão de exposição de verdade, e uma sombra de contato
+      // real (não só o SSAO) pra grudar no piso
+      const pedW = frameW * 0.62;
+      const pedH = 1.0;
+      const pedD = 0.55;
+      const pedFrontZ = pedD / 2 + 0.12;
+      const localFloorY = FLOOR_Y - group.position.y;
+      const pedestal = new THREE.Mesh(new THREE.BoxGeometry(pedW, pedH, pedD), pedestalMat);
+      pedestal.position.set(0, localFloorY + pedH / 2, pedFrontZ);
+      pedestal.castShadow = true;
+      pedestal.receiveShadow = true;
+      group.add(pedestal);
+
+      const trimH = 0.035;
+      const trim = new THREE.Mesh(
+        new THREE.BoxGeometry(pedW + 0.04, trimH, pedD + 0.04),
+        pedestalTrimMat,
+      );
+      trim.position.set(0, localFloorY + pedH + trimH / 2, pedFrontZ);
+      trim.castShadow = true;
+      group.add(trim);
 
       // luminária discreta embutida perto do teto — sem feixe cônico
       // visível: a referência não tem um "raio de luz" no ar, só a
@@ -505,13 +576,24 @@ export default function GallerySection() {
       const spot = new THREE.SpotLight(
         0xffdca8,
         42 * work.lightMul,
-        16,
-        THREE.MathUtils.degToRad(42),
+        // alcance mais curto e cone mais fechado que antes: o spot foi
+        // recalibrado numa cena sem pedestal, e um cone largo de longo
+        // alcance (16, 42°) vazava luz demais bem no topo do pedestal —
+        // que fica quase no eixo do feixe — estourando com o bloom numa
+        // coluna. Focado na obra em vez de continuar até o chão
+        7.5,
+        THREE.MathUtils.degToRad(36),
         0.75,
         1,
       );
       spot.position.set(0, fixtureY, 0.9);
       spot.target = spotTarget;
+      spot.castShadow = true;
+      spot.shadow.mapSize.set(512, 512);
+      spot.shadow.bias = -0.0018;
+      spot.shadow.radius = 3;
+      spot.shadow.camera.near = 0.3;
+      spot.shadow.camera.far = 8;
       group.add(spot);
 
       peaks[i] = findArcT(centerPt);
@@ -528,6 +610,47 @@ export default function GallerySection() {
       // metros de mundo
       placardAnchors[i] = group.position.clone();
     });
+
+    // mapa de "andar e parar": distribui o progresso do scroll ao longo
+    // da curva de forma NÃO linear — devagar (mais scroll por metro
+    // andado) perto de cada pico, rápido no vão entre um quadro e outro.
+    // warpP[k]/warpU[k] são pares (progresso acumulado, posição na curva)
+    // amostrados uniformemente em u; dado um progresso de scroll cru,
+    // busca-se por interpolação onde ele cai nessa tabela pra achar o t
+    // real de arco a usar na câmera
+    const warpU = new Float32Array(WARP_SAMPLES + 1);
+    const warpP = new Float32Array(WARP_SAMPLES + 1);
+    let cumulative = 0;
+    for (let k = 0; k <= WARP_SAMPLES; k++) {
+      const u = k / WARP_SAMPLES;
+      let weight = 1;
+      for (const peak of peaks) {
+        const d = (u - peak) / DWELL_SIGMA;
+        weight += DWELL_STRENGTH * Math.exp(-d * d);
+      }
+      if (k > 0) cumulative += weight / WARP_SAMPLES;
+      warpU[k] = u;
+      warpP[k] = cumulative;
+    }
+    const warpTotal = warpP[WARP_SAMPLES] || 1;
+    for (let k = 0; k <= WARP_SAMPLES; k++) warpP[k] /= warpTotal;
+
+    function warpProgressToU(p: number): number {
+      let lo = 0;
+      let hi = WARP_SAMPLES;
+      while (lo < hi) {
+        const mid = (lo + hi) >> 1;
+        if (warpP[mid] < p) lo = mid + 1;
+        else hi = mid;
+      }
+      if (lo === 0) return warpU[0];
+      const p0 = warpP[lo - 1];
+      const p1 = warpP[lo];
+      const u0 = warpU[lo - 1];
+      const u1 = warpU[lo];
+      const f = p1 > p0 ? (p - p0) / (p1 - p0) : 0;
+      return u0 + (u1 - u0) * f;
+    }
 
     let width = 1;
     let height = 1;
@@ -579,20 +702,26 @@ export default function GallerySection() {
     // meio-comprimento (em progresso 0-1) da janela onde a placa fica
     // acesa — dá tempo de ler artista/data/descrição antes de apagar
     const CAPTION_HALF_WINDOW = 0.1;
-    const BLEND_WINDOW = 0.08;
+    const BLEND_WINDOW = 0.09;
 
     function updateFrame(progress: number) {
-      const t = THREE.MathUtils.clamp(progress, 0, 1);
+      const rawT = THREE.MathUtils.clamp(progress, 0, 1);
+      // progresso de scroll -> posição real na curva, já passando pelo
+      // mapa de "andar e parar" (devagar nos picos, rápido nos vãos)
+      const t = warpProgressToU(rawT);
       const pos = curve.getPointAt(t);
       const aheadPos = curve.getPointAt(Math.min(t + 0.012, 1));
-      // leve balanço vertical: não é um trilho rígido de câmera, é uma
-      // caminhada — o S da própria curva já cuida do sway lateral
-      const bob = Math.sin(progress * Math.PI * 14) * 0.03;
+      // leve balanço vertical de passo — atado a t (posição real andada),
+      // não ao progresso de scroll cru: parado no auge de uma obra o
+      // corpo quase não balança, e acelera de novo assim que retoma a
+      // caminhada até a próxima
+      const bob = Math.sin(t * Math.PI * 14) * 0.03;
       camera.position.set(pos.x, 0.3 + bob, pos.z);
 
       // olha um pouco à frente no trajeto por padrão, mas quando a obra
-      // mais próxima está no auge o olhar vira parcialmente pra ela —
-      // o giro de cabeça de quem caminha e se detém a admirar o quadro
+      // mais próxima está no auge o olhar vira quase inteiramente pra
+      // ela — o giro de cabeça de quem chega, para e realmente encara o
+      // quadro, não só de relance a caminho da próxima
       const lookTarget = new THREE.Vector3(aheadPos.x, 0.25, aheadPos.z);
       let nearestIdx = -1;
       let nearestDist = Infinity;
@@ -604,7 +733,7 @@ export default function GallerySection() {
         }
       });
       if (nearestIdx >= 0 && nearestDist < BLEND_WINDOW) {
-        const w = (1 - nearestDist / BLEND_WINDOW) * 0.22;
+        const w = (1 - nearestDist / BLEND_WINDOW) * 0.62;
         lookTarget.lerp(paintingLookTargets[nearestIdx], w);
       }
       camera.lookAt(lookTarget);
@@ -678,6 +807,8 @@ export default function GallerySection() {
       flutedNormal.dispose();
       frameMat.dispose();
       fixtureMat.dispose();
+      pedestalMat.dispose();
+      pedestalTrimMat.dispose();
       trackMat.dispose();
       downlightMat.dispose();
       archMat.dispose();
