@@ -768,7 +768,9 @@ export default function GallerySection() {
         el.style.transform = `translate(${px}px, ${py}px) translate(-100%, -50%)`;
       });
 
-      if (t > 0.03) revealNav();
+      // só reaparece perto do fim da caminhada, não logo na entrada — o
+      // menu por cima do corredor tirava a imersão pedida
+      if (t > 0.94) revealNav();
     }
     updateFrame(0);
 

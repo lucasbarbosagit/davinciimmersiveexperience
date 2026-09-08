@@ -323,12 +323,11 @@
 }
 
 .introOverlay {
-  /* a abertura cobre o hero inteiro; z acima de todas as camadas dele
-     (portalFade z6 é a mais alta) — abaixo só do nav, que fica visível
-     por cima do vídeo de propósito */
+  /* a abertura cobre o hero inteiro E o nav (z acima do z-50 do nav) —
+     é uma tela de abertura, o menu não deveria aparecer por cima dela */
   position: absolute;
   inset: 0;
-  z-index: 20;
+  z-index: 60;
   background: #050403;
 }
 
