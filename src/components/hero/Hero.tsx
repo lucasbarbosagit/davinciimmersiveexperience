@@ -6,7 +6,6 @@ import { gsap } from "@/lib/gsap";
 import { useIsomorphicLayoutEffect } from "@/hooks/useIsomorphicLayoutEffect";
 import ArtworkCanvas, { type ArtworkCanvasHandle } from "./ArtworkCanvas";
 import GoldDust from "./GoldDust";
-import HeroIntro from "./HeroIntro";
 import styles from "./Hero.module.css";
 
 // cada obra guarda uma porta — a passagem pro capítulo seguinte: o orbe
@@ -526,10 +525,6 @@ export default function Hero() {
         <span className={styles.line} />
       </div>
 
-      {/* por último no DOM (fica por cima de tudo no hero): o vídeo de
-          abertura — pergaminho virando pintura — que desvanece pro hero
-          interativo já montado por baixo */}
-      <HeroIntro />
     </section>
   );
 }

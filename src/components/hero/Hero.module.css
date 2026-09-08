@@ -323,9 +323,12 @@
 }
 
 .introOverlay {
-  /* a abertura cobre o hero inteiro E o nav (z acima do z-50 do nav) —
-     é uma tela de abertura, o menu não deveria aparecer por cima dela */
-  position: absolute;
+  /* fixed, não absolute: desde a rodada anterior o componente é irmão
+     do Hero em page.tsx, não mais filho de .heroPin — se ficasse
+     absolute aqui (sem ancestral posicionado) cobriria o documento
+     inteiro, não só a viewport. z acima do z-50 do nav: é uma tela de
+     abertura, o menu não deveria aparecer por cima dela */
+  position: fixed;
   inset: 0;
   z-index: 60;
   background: #050403;
