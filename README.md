@@ -1,10 +1,13 @@
+
+
+
 # Da Vinci Immersive
 
 Uma experiência imersiva pelas obras-primas de Leonardo da Vinci — scroll-driven, com transições que revelam cada pintura camada por camada, da geometria do estudo ao gesto final da obra.
 
 Projeto de portfólio construído pra explorar animação de alto nível (o tipo de interação premiada em coisas como o Awwwards) dentro de um stack de produção real, com atenção a performance e acessibilidade — não só a peça visual.
 
-[![Da Vinci Immersive — walkthrough](.github/readme/preview-hero.png)](https://github.com/lucasbarbosagit/davinciimmersiveexperience/raw/main/.github/readme/preview-walkthrough.mp4)
+https://github.com/user-attachments/assets/e9bffb9f-e97b-46d0-bd85-eb77cb9f8302
 
 > ▶ Clique na imagem para o vídeo com as seções do site até aqui.
 
