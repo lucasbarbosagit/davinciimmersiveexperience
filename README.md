@@ -4,7 +4,9 @@ Uma experiência imersiva pelas obras-primas de Leonardo da Vinci — scroll-dri
 
 Projeto de portfólio construído pra explorar animação de alto nível (o tipo de interação premiada em coisas como o Awwwards) dentro de um stack de produção real, com atenção a performance e acessibilidade — não só a peça visual.
 
-<video src=".github/readme/preview-walkthrough.mp4" controls muted playsinline></video>
+[![Da Vinci Immersive — walkthrough](.github/readme/preview-hero.png)](https://github.com/lucasbarbosagit/davinciimmersiveexperience/raw/main/.github/readme/preview-walkthrough.mp4)
+
+> ▶ Clique na imagem para o vídeo com as seções do site até aqui.
 
 ## O que tem aqui
 
