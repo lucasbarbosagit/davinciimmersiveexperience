@@ -7,7 +7,9 @@ Uma experiência imersiva pelas obras-primas de Leonardo da Vinci — scroll-dri
 
 Projeto de portfólio construído pra explorar animação de alto nível (o tipo de interação premiada em coisas como o Awwwards) dentro de um stack de produção real, com atenção a performance e acessibilidade — não só a peça visual.
 
-https://github.com/user-attachments/assets/e9bffb9f-e97b-46d0-bd85-eb77cb9f8302
+
+https://github.com/user-attachments/assets/e3f60763-e888-4ac2-9863-7b8914e42f5d
+
 
 > ▶ Clique na imagem para o vídeo com as seções do site até aqui.
 
