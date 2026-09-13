@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import { gsap } from "@/lib/gsap";
+import { useLenis } from "lenis/react";
+import { gsap, ScrollTrigger } from "@/lib/gsap";
 import { useIsomorphicLayoutEffect } from "@/hooks/useIsomorphicLayoutEffect";
 import ArtworkCanvas, { type ArtworkCanvasHandle } from "./ArtworkCanvas";
 import GoldDust from "./GoldDust";
@@ -93,6 +94,16 @@ export default function Hero() {
   const orbGlowRef = useRef<HTMLDivElement>(null);
   const portalRevealRef = useRef<HTMLDivElement>(null);
   const canvasHandleRef = useRef<ArtworkCanvasHandle>(null);
+  const lenis = useLenis();
+  // o timeline do mergulho (mais abaixo) monta uma vez só ([] de
+  // propósito — recriar o pin toda vez que o lenis mudasse de
+  // identidade chegou a corromper a medida do próprio pin, empurrando o
+  // início do pin da galeria pra um valor errado). onLeave lê o lenis
+  // mais atual por uma ref, não por dependência do efeito
+  const lenisRef = useRef(lenis);
+  useEffect(() => {
+    lenisRef.current = lenis;
+  }, [lenis]);
 
   const [activeIndex, setActiveIndex] = useState(0);
   const activeIndexRef = useRef(0);
@@ -258,6 +269,25 @@ export default function Hero() {
                   } else {
                     resumeGlowPulse();
                     divingRef.current = false;
+                  }
+                },
+                // o pin de uma seção de 100vh reserva (altura natural +
+                // distância do pin) de scroll — não só a distância do pin
+                // — então, mesmo terminando o mergulho num cinza sólido
+                // (ATO 4), ainda sobra uma tela inteira de scroll "morto"
+                // até o pin da GallerySection prender de verdade. Em vez
+                // de deixar o usuário rolar manualmente por esse vão, no
+                // instante em que o mergulho termina a gente já avança
+                // (Lenis, suave) direto pro início do pin da galeria —
+                // "cai" na galeria em vez de continuar rolando cor lisa
+                onLeave: () => {
+                  const galleryTrigger = ScrollTrigger.getAll().find(
+                    (st) =>
+                      st.vars.pin &&
+                      (st.vars.trigger as HTMLElement | undefined)?.id === "galeria",
+                  );
+                  if (galleryTrigger) {
+                    lenisRef.current?.scrollTo(galleryTrigger.start, { duration: 0.6 });
                   }
                 },
               },
