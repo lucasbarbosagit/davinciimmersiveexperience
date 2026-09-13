@@ -5,9 +5,27 @@
   background: #0a0a0c;
 }
 
-.galleryCanvas {
+.galleryStage {
   position: absolute;
   inset: 0;
+  /* leve margem de segurança: o Ken Burns (scale até 1.14 + pan lateral)
+     não pode deixar borda vazia aparecer, então cada slide nasce maior
+     que a viewport — overflow:hidden aqui corta o excesso */
+  overflow: hidden;
+}
+
+.slide {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  will-change: transform, opacity;
+}
+
+.slideImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .galleryScrim {
@@ -25,15 +43,13 @@
 }
 
 .caption {
-  /* placa de museu de verdade: fica ancorada num ponto da parede ao lado
-     do quadro (não mais empilhada no centro da tela) — left/top ficam
-     em 0 de propósito, é o transform (escrito via style.transform no
-     onUpdate, sem passar pelo GSAP) que posiciona E ancora pela borda
-     certa (translate(-100%,-50%): a placa cresce pra esquerda a partir
-     do ponto, como uma etiqueta presa na parede) */
+  /* placa de museu de verdade: left/top vêm de `anchor` (% da imagem,
+     calibrado a olho por obra) via inline style; o transform aqui só
+     ancora pela borda certa — a placa cresce pra esquerda a partir do
+     ponto, como uma etiqueta presa na parede, com uma folga da própria
+     obra. Só a opacidade é animada por frame (JS), a posição é estática */
   position: absolute;
-  left: 0;
-  top: 0;
+  transform: translate(calc(-100% - 22px), -50%);
   width: 236px;
   z-index: 3;
   padding: 20px 22px;
