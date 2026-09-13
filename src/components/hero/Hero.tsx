@@ -451,12 +451,17 @@ export default function Hero() {
       {/* janela do portal: clip-path circle crescendo sobre uma prévia
           estática da entrada do corredor da galeria — fica fora de
           heroMedia (não herda o scale) porque o próprio raio já é animado
-          em sincronia. É só uma foto, não a cena 3D de verdade (essa vem
+          em sincronia. É só uma foto, não a cena de verdade (essa vem
           depois que o pin solta): a GallerySection não precisa de uma
-          animação de entrada escondida atrás do pin como a antiga
-          BatismoSection precisava, porque sua própria câmera de repouso
-          (progresso 0 do scroll) já É a vista de entrada do corredor —
-          então não há costura pra esconder, só a troca foto -> WebGL */}
+          animação de entrada escondida atrás do pin, porque seu próprio
+          repouso (progresso 0 do scroll) já É essa mesma imagem de
+          entrada do corredor — então não há costura pra esconder, só a
+          troca de uma cópia estática pra outra ao vivo. Tem que ser a
+          instalação da galeria (gallery-bg-salvator), NÃO o recorte
+          fechado da pintura (salvator-mundi) — esse já é só a obra, sem
+          o corredor/parede/pedestal em volta, e mergulhar nele dava a
+          sensação errada de "entrar na pintura" em vez de "entrar na
+          galeria" */}
       <div
         className={styles.portalReveal}
         ref={portalRevealRef}
@@ -464,11 +469,11 @@ export default function Hero() {
       >
         <div className={styles.portalRevealMedia}>
           <Image
-            src="/assets/salvator-mundi.jpg"
+            src="/assets/gallery-bg-salvator.jpg"
             alt=""
             fill
             sizes="100vw"
-            style={{ objectFit: "cover", objectPosition: "50% 30%" }}
+            style={{ objectFit: "cover", objectPosition: "50% 50%" }}
           />
         </div>
         <div className={styles.portalRevealCopy}>
