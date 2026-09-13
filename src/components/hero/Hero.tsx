@@ -257,7 +257,14 @@ export default function Hero() {
               scrollTrigger: {
                 trigger: heroPin,
                 start: "top top",
-                end: "+=140%",
+                // era +=140% (quase 1,5 tela de scroll só pro mergulho):
+                // a metade inicial mal mudava nada na tela (o zoom com
+                // power2.in começa devagar de propósito) e isso lia como
+                // "cadê a ação?" antes de qualquer coisa acontecer. Bem
+                // mais curto = o mergulho inteiro cabe num gesto de
+                // scroll só, sem trecho morto no meio pra sentir como
+                // uma "parada" antes da galeria
+                end: "+=60%",
                 scrub: true,
                 pin: true,
                 onUpdate: (self) => {
@@ -284,9 +291,33 @@ export default function Hero() {
                       st.vars.pin &&
                       (st.vars.trigger as HTMLElement | undefined)?.id === "galeria",
                   );
-                  if (galleryTrigger) {
-                    lenisRef.current?.scrollTo(galleryTrigger.start, { duration: 0.6 });
-                  }
+                  if (!galleryTrigger) return;
+                  // onLeave dispara de dentro do próprio ciclo de emit()
+                  // do Lenis (é o "scroll" event dele que chama
+                  // ScrollTrigger.update()) — chamar scrollTo AQUI DENTRO,
+                  // ainda no mesmo tick, reentra no Animate interno do
+                  // Lenis no meio do próprio advance() que originou esse
+                  // emit, e às vezes (testado: ~1 em cada 4 tentativas,
+                  // via scroll real por wheel) o tween novo nasce mas não
+                  // anda — fica preso no scroll exato onde o mergulho
+                  // terminou. Adiar um frame reduz bastante, mas não some
+                  // 100% com a reentrância — então, além do adiamento,
+                  // confere se o scroll realmente saiu do lugar logo
+                  // depois e tenta de novo se não saiu (em vez de confiar
+                  // cegamente numa única chamada que pode ter sido
+                  // engolida)
+                  const target = galleryTrigger.start;
+                  const trySnap = (attempt: number) => {
+                    const before = window.scrollY;
+                    lenisRef.current?.scrollTo(target, { duration: 0.6 });
+                    if (attempt >= 4) return;
+                    setTimeout(() => {
+                      const moved = Math.abs(window.scrollY - before) > 2;
+                      const arrived = Math.abs(window.scrollY - target) <= 2;
+                      if (!moved && !arrived) trySnap(attempt + 1);
+                    }, 180);
+                  };
+                  requestAnimationFrame(() => trySnap(1));
                 },
               },
             })
@@ -327,23 +358,24 @@ export default function Hero() {
             // heroMedia, cresce junto) e é engolido pelo mergulho
             .to(
               orbGlowRef.current,
-              { opacity: 1, ease: "none", duration: 0.15 },
-              0.15,
+              { opacity: 1, ease: "none", duration: 0.12 },
+              0,
             )
             .to(
               orbGlowRef.current,
-              { opacity: 0, ease: "none", duration: 0.2 },
-              0.3,
+              { opacity: 0, ease: "none", duration: 0.16 },
+              0.12,
             )
-            // ATO 2 (0.15 -> 1): mergulho na porta da obra ATIVA — a
-            // mesma porta dirige o scale, a origem e o raio da janela,
-            // então a borda nunca desalinha do orbe/olho/códice
+            // ATO 2 (0 -> 1): mergulho na porta da obra ATIVA, já a
+            // partir do primeiro tick de scroll (sem espera antes de
+            // começar) — a mesma porta dirige o scale, a origem e o raio
+            // da janela, então a borda nunca desalinha do orbe/olho/códice
             .to(
               progState,
               {
                 p: 1,
                 ease: "power2.in",
-                duration: 0.85,
+                duration: 1,
                 onUpdate: () => {
                   const door = getDoorOnScreen(
                     ARTWORKS[activeIndexRef.current],
@@ -361,7 +393,7 @@ export default function Hero() {
                   });
                 },
               },
-              0.15,
+              0,
             )
             // SEM ATO 3 e SEM ATO 4 de propósito — os dois já existiram
             // aqui e os dois causaram, de formas diferentes, a MESMA
