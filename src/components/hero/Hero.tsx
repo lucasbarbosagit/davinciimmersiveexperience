@@ -342,8 +342,20 @@ export default function Hero() {
               0.35,
             )
             // ATO 4 (0.5 -> 1): a passagem pela cor do vidro — o véu
-            // azul-acinzentado sobe no meio do mergulho e se dissolve
-            // exatamente quando o pin solta, na entrada da galeria
+            // azul-acinzentado sobe no meio do mergulho e, em vez de se
+            // dissolver de volta (o que deixava a prévia da galeria
+            // plenamente visível bem no instante em que o pin solta),
+            // termina opaco no MESMO cinza-chumbo de fundo da galeria.
+            // Sem isso, o pin do Hero solta com a imagem da galeria já
+            // 100% visível — e como o elemento #hero, uma vez despinado,
+            // ainda ocupa uma tela inteira de scroll normal antes do pin
+            // da própria GallerySection prender, essa mesma imagem
+            // simplesmente rolava pra fora da tela pra, logo em seguida,
+            // reaparecer fixa — a "dupla galeria" que se via ao rolar.
+            // Terminando num cinza-chumbo sólido (idêntico ao fundo da
+            // galeria), esse trecho de scroll normal fica imperceptível
+            // — só cor lisa saindo de tela — e a chegada de verdade
+            // acontece uma vez só, quando o pin da galeria prende
             .to(
               portalFadeRef.current,
               { opacity: 0.55, ease: "none", duration: 0.2 },
@@ -351,7 +363,7 @@ export default function Hero() {
             )
             .to(
               portalFadeRef.current,
-              { opacity: 0, ease: "none", duration: 0.3 },
+              { backgroundColor: "#0a0a0c", opacity: 1, ease: "none", duration: 0.3 },
               0.7,
             );
         },
