@@ -371,31 +371,21 @@ export default function Hero() {
               { opacity: 1, filter: "blur(0px)", ease: "none", duration: 0.35 },
               0.35,
             )
-            // ATO 4 (0.5 -> 1): a passagem pela cor do vidro — o véu
-            // azul-acinzentado sobe no meio do mergulho e, em vez de se
-            // dissolver de volta (o que deixava a prévia da galeria
-            // plenamente visível bem no instante em que o pin solta),
-            // termina opaco no MESMO cinza-chumbo de fundo da galeria.
-            // Sem isso, o pin do Hero solta com a imagem da galeria já
-            // 100% visível — e como o elemento #hero, uma vez despinado,
-            // ainda ocupa uma tela inteira de scroll normal antes do pin
-            // da própria GallerySection prender, essa mesma imagem
-            // simplesmente rolava pra fora da tela pra, logo em seguida,
-            // reaparecer fixa — a "dupla galeria" que se via ao rolar.
-            // Terminando num cinza-chumbo sólido (idêntico ao fundo da
-            // galeria), esse trecho de scroll normal fica imperceptível
-            // — só cor lisa saindo de tela — e a chegada de verdade
-            // acontece uma vez só, quando o pin da galeria prende
-            .to(
-              portalFadeRef.current,
-              { opacity: 0.55, ease: "none", duration: 0.2 },
-              0.5,
-            )
-            .to(
-              portalFadeRef.current,
-              { backgroundColor: "#0a0a0c", opacity: 1, ease: "none", duration: 0.3 },
-              0.7,
-            );
+            // SEM ATO 4 de propósito: chegou a existir um véu que apagava
+            // a prévia pra um cinza sólido bem aqui no fim do mergulho —
+            // mas isso é que causava a queixa de "aparece, fica escuro,
+            // aparece de novo": a imagem sumia atrás do véu e, um instante
+            // depois, a MESMA imagem reaparecia (já como a GallerySection
+            // de verdade). Duas aparições da mesma obra, uma escondendo a
+            // outra, em vez de uma caminhada só. Agora que onLeave (acima)
+            // salta o scroll direto pro início do pin da galeria assim que
+            // este pin solta, o vão morto de scroll normal nem chega a ser
+            // percorrido manualmente — e como a prévia aqui usa a MESMA
+            // imagem (gallery-bg-salvator) no mesmo enquadramento que o
+            // repouso da própria GallerySection, deixando-a visível e
+            // brilhante até o fim, a transição vira uma emenda única e
+            // contínua: a prévia nunca escurece, o salto de scroll é
+            // instantâneo, e o que estava ali já É o começo da galeria.
         },
       );
 
