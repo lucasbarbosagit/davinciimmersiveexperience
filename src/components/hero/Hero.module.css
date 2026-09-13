@@ -183,15 +183,19 @@
 }
 
 .portalRevealMedia {
-  /* prévia estática da entrada da galeria (foto, não a cena 3D real) —
-     diferente do antigo esquema com a BatismoSection (que precisava
-     terminar uma animação escondida atrás do pin pra virar, pixel a
-     pixel, o que aparecia dentro da janela), a GallerySection não tem
-     essa costura pra esconder: sua câmera de repouso já É a entrada do
-     corredor. Essa janela só existe pra dar um gostinho da cor/luz antes
-     do WebGL de verdade assumir quando o pin solta */
+  /* SEM foto da galeria aqui dentro (ver comentário grande no JSX) — só
+     um brilho, o núcleo quente do mergulho clareando pro vidro
+     azul-acinzentado do orbe nas bordas. A janela cresce (clip-path,
+     via GSAP) revelando mais desse gradiente, nunca uma cena real */
   position: absolute;
   inset: 0;
+  background: radial-gradient(
+    circle at 50% 50%,
+    #f6e8c4 0%,
+    #d9bc7a 24%,
+    #6b5636 52%,
+    #34383c 100%
+  );
 }
 
 .heroScrim {

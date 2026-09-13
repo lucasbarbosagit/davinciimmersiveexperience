@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import Image from "next/image";
 import { useLenis } from "lenis/react";
 import { gsap, ScrollTrigger } from "@/lib/gsap";
 import { useIsomorphicLayoutEffect } from "@/hooks/useIsomorphicLayoutEffect";
@@ -168,13 +167,12 @@ export default function Hero() {
     if (!heroPin || !heroMedia) return;
 
     const ctx = gsap.context(() => {
-      // o portal nasce invisível e desfocado: a janela (clip-path)
-      // acompanha a porta desde o primeiro tick, mas a prévia da galeria
-      // dentro dela só se MATERIALIZA no meio do mergulho
+      // a janela do portal (clip-path) acompanha a porta desde o primeiro
+      // tick, crescendo em raio zero -> tela cheia — mas o que ela revela
+      // NÃO é mais a galeria em si (ver comentário grande mais abaixo,
+      // no JSX, sobre por que essa prévia foi removida)
       gsap.set(portalRevealRef.current, {
         clipPath: "circle(0vh at 50% 50%)",
-        opacity: 0,
-        filter: "blur(14px)",
       });
       // p normalizado 0->1; o zoom real vem da porta ativa no onUpdate,
       // então cada obra mergulha até a profundidade da própria porta
@@ -365,27 +363,28 @@ export default function Hero() {
               },
               0.15,
             )
-            // ATO 3 (0.35 -> 0.7): a galeria se materializa DENTRO da porta
-            .to(
-              portalRevealRef.current,
-              { opacity: 1, filter: "blur(0px)", ease: "none", duration: 0.35 },
-              0.35,
-            )
-            // SEM ATO 4 de propósito: chegou a existir um véu que apagava
-            // a prévia pra um cinza sólido bem aqui no fim do mergulho —
-            // mas isso é que causava a queixa de "aparece, fica escuro,
-            // aparece de novo": a imagem sumia atrás do véu e, um instante
-            // depois, a MESMA imagem reaparecia (já como a GallerySection
-            // de verdade). Duas aparições da mesma obra, uma escondendo a
-            // outra, em vez de uma caminhada só. Agora que onLeave (acima)
-            // salta o scroll direto pro início do pin da galeria assim que
-            // este pin solta, o vão morto de scroll normal nem chega a ser
-            // percorrido manualmente — e como a prévia aqui usa a MESMA
-            // imagem (gallery-bg-salvator) no mesmo enquadramento que o
-            // repouso da própria GallerySection, deixando-a visível e
-            // brilhante até o fim, a transição vira uma emenda única e
-            // contínua: a prévia nunca escurece, o salto de scroll é
-            // instantâneo, e o que estava ali já É o começo da galeria.
+            // SEM ATO 3 e SEM ATO 4 de propósito — os dois já existiram
+            // aqui e os dois causaram, de formas diferentes, a MESMA
+            // queixa: "aparece uma primeira galeria, depois a de
+            // verdade". ATO 3 fazia a foto da galeria se materializar
+            // dentro da janela do portal ainda com o nav visível, ainda
+            // dentro do Hero — e por melhor que essa foto batesse pixel a
+            // pixel com o repouso da GallerySection (ela batia: mesma
+            // imagem, mesmo enquadramento), o usuário via duas vezes o
+            // MESMO ato de "a obra aparece": uma vez dentro do portal,
+            // outra vez quando a seção de verdade prendia. Trocar por um
+            // véu escuro no fim (o antigo ATO 4) só adiava o problema:
+            // imagem aparece -> escurece -> reaparece já é a mesma queixa
+            // com um blackout no meio. A correção de verdade não é
+            // esconder OU casar melhor a emenda — é a janela do portal
+            // não revelar a galeria NENHUMA vez. Ela cresce (o clip-path
+            // ainda acompanha a porta, ver progState acima) revelando só
+            // o brilho quente do próprio portalRevealMedia (um gradiente,
+            // sem foto nenhuma — ver CSS), então o mergulho termina num
+            // círculo de luz cheio de tela, não numa prévia da sala. A
+            // ÚNICA vez que a galeria aparece é quando o pin dela prende
+            // de verdade, logo depois do salto de onLeave — uma chegada
+            // só, em vez de duas.
         },
       );
 
@@ -480,42 +479,29 @@ export default function Hero() {
         <GoldDust />
       </div>
 
-      {/* janela do portal: clip-path circle crescendo sobre uma prévia
-          estática da entrada do corredor da galeria — fica fora de
+      {/* janela do portal: clip-path circle crescendo — fica fora de
           heroMedia (não herda o scale) porque o próprio raio já é animado
-          em sincronia. É só uma foto, não a cena de verdade (essa vem
-          depois que o pin solta): a GallerySection não precisa de uma
-          animação de entrada escondida atrás do pin, porque seu próprio
-          repouso (progresso 0 do scroll) já É essa mesma imagem de
-          entrada do corredor — então não há costura pra esconder, só a
-          troca de uma cópia estática pra outra ao vivo. Tem que ser a
-          instalação da galeria (gallery-bg-salvator), NÃO o recorte
-          fechado da pintura (salvator-mundi) — esse já é só a obra, sem
-          o corredor/parede/pedestal em volta, e mergulhar nele dava a
-          sensação errada de "entrar na pintura" em vez de "entrar na
-          galeria".
+          em sincronia com o zoom da obra.
 
-          SEM título/legenda própria aqui dentro (tinha um "Entre na
-          galeria das obras" antes): a galeria já tem a sua própria
-          legenda pro Salvator Mundi logo que o pin solta, então um
-          segundo texto de "chegada" aqui virava uma dupla apresentação
-          da mesma obra, uma atrás da outra — como duas galerias
-          separadas em vez de uma só caminhada contínua. O portal é só a
-          janela de transição, a chegada de verdade é a legenda de lá */}
+          NÃO revela mais a galeria (nem foto, nem crop da obra): chegou a
+          mostrar a instalação da galeria de verdade aqui dentro, pixel a
+          pixel igual ao repouso da GallerySection — e mesmo batendo
+          perfeitamente, o usuário via a obra "chegar" duas vezes, uma vez
+          aqui (ainda com o nav visível, ainda dentro do Hero) e de novo
+          quando o pin da galeria prendia de verdade. Tentar esconder essa
+          repetição com um véu escuro no fim virava a MESMA queixa com um
+          blackout no meio: aparece, escurece, aparece de novo. A correção
+          foi tirar a foto da galeria daqui — portalRevealMedia agora é só
+          um gradiente (o brilho quente do mergulho, ver CSS), sem cenário
+          nenhum por trás. A única vez que a galeria some do escuro é
+          quando o pin dela prende de verdade, logo após o salto de
+          onLeave (acima) — uma chegada só, não duas */}
       <div
         className={styles.portalReveal}
         ref={portalRevealRef}
         role="presentation"
       >
-        <div className={styles.portalRevealMedia}>
-          <Image
-            src="/assets/gallery-bg-salvator.jpg"
-            alt=""
-            fill
-            sizes="100vw"
-            style={{ objectFit: "cover", objectPosition: "50% 50%" }}
-          />
-        </div>
+        <div className={styles.portalRevealMedia} />
       </div>
 
       <div className={styles.portalFade} ref={portalFadeRef} />
