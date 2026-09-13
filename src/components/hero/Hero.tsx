@@ -461,7 +461,15 @@ export default function Hero() {
           fechado da pintura (salvator-mundi) — esse já é só a obra, sem
           o corredor/parede/pedestal em volta, e mergulhar nele dava a
           sensação errada de "entrar na pintura" em vez de "entrar na
-          galeria" */}
+          galeria".
+
+          SEM título/legenda própria aqui dentro (tinha um "Entre na
+          galeria das obras" antes): a galeria já tem a sua própria
+          legenda pro Salvator Mundi logo que o pin solta, então um
+          segundo texto de "chegada" aqui virava uma dupla apresentação
+          da mesma obra, uma atrás da outra — como duas galerias
+          separadas em vez de uma só caminhada contínua. O portal é só a
+          janela de transição, a chegada de verdade é a legenda de lá */}
       <div
         className={styles.portalReveal}
         ref={portalRevealRef}
@@ -475,10 +483,6 @@ export default function Hero() {
             sizes="100vw"
             style={{ objectFit: "cover", objectPosition: "50% 50%" }}
           />
-        </div>
-        <div className={styles.portalRevealCopy}>
-          <span className={styles.portalRevealEyebrow}>A coleção</span>
-          <h2>Entre na galeria das obras</h2>
         </div>
       </div>
 

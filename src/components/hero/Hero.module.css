@@ -194,32 +194,6 @@
   inset: 0;
 }
 
-.portalRevealCopy {
-  /* texto de entrada da galeria, na mesma posição/estilo que os capítulos
-     seguintes usam — "dentro da bola" já anuncia pra onde o mergulho leva */
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 9vh;
-  padding: 0 5vw;
-}
-
-.portalRevealEyebrow {
-  font-size: 12px;
-  letter-spacing: 2px;
-  color: var(--gold-soft);
-  margin-bottom: 14px;
-  display: block;
-}
-
-.portalRevealCopy h2 {
-  font-family: var(--font-serif), serif;
-  font-weight: 500;
-  font-size: clamp(30px, 5vw, 60px);
-  color: var(--cream);
-  max-width: 16ch;
-}
-
 .heroScrim {
   position: absolute;
   inset: 0;
