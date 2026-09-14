@@ -301,25 +301,26 @@ export default function Hero() {
                   // ScrollTrigger.update()) — chamar scrollTo AQUI DENTRO,
                   // ainda no mesmo tick, reentra no Animate interno do
                   // Lenis no meio do próprio advance() que originou esse
-                  // emit, e às vezes (testado: ~1 em cada 4 tentativas,
-                  // via scroll real por wheel) o tween novo nasce mas não
-                  // anda — fica preso no scroll exato onde o mergulho
-                  // terminou. Adiar um frame reduz bastante, mas não some
-                  // 100% com a reentrância — então, além do adiamento,
-                  // confere se o scroll realmente saiu do lugar logo
-                  // depois e tenta de novo se não saiu (em vez de confiar
-                  // cegamente numa única chamada que pode ter sido
-                  // engolida)
+                  // emit. Isso quebra de DUAS formas diferentes, não só
+                  // uma: às vezes o tween novo nasce mas não anda nada
+                  // (fica preso exatamente onde o mergulho terminou);
+                  // outras vezes ele ANDA, só que é abandonado no meio do
+                  // caminho por causa do momentum que sobrou do wheel (ex:
+                  // medido chegando a 1322 de um alvo 1440 e travando ali
+                  // pra sempre, nunca completando) — essa segunda forma é
+                  // pior: para na correção antiga (que só verificava "se
+                  // moveu"), porque tecnicamente MOVEU, só que não chegou.
+                  // A verificação certa é "chegou no alvo", não "saiu do
+                  // lugar" — e insiste tentando de novo (a partir de onde
+                  // quer que tenha parado) até realmente chegar
                   const target = galleryTrigger.start;
                   const trySnap = (attempt: number) => {
-                    const before = window.scrollY;
                     lenisRef.current?.scrollTo(target, { duration: 0.6 });
-                    if (attempt >= 4) return;
+                    if (attempt >= 6) return;
                     setTimeout(() => {
-                      const moved = Math.abs(window.scrollY - before) > 2;
                       const arrived = Math.abs(window.scrollY - target) <= 2;
-                      if (!moved && !arrived) trySnap(attempt + 1);
-                    }, 180);
+                      if (!arrived) trySnap(attempt + 1);
+                    }, 250);
                   };
                   requestAnimationFrame(() => trySnap(1));
                 },
