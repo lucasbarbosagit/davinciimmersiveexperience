@@ -183,10 +183,11 @@
 }
 
 .portalRevealMedia {
-  /* SEM foto da galeria aqui dentro (ver comentário grande no JSX) — só
-     um brilho, o núcleo quente do mergulho clareando pro vidro
-     azul-acinzentado do orbe nas bordas. A janela cresce (clip-path,
-     via GSAP) revelando mais desse gradiente, nunca uma cena real */
+  /* camada de baixo: o brilho, o núcleo quente do mergulho clareando
+     pro vidro azul-acinzentado do orbe nas bordas. A janela cresce
+     (clip-path, via GSAP) revelando mais desse gradiente — e é o que
+     ainda se vê por trás enquanto .portalRevealPhoto (a foto real,
+     acima) ainda está com opacity baixa, dissolvendo */
   position: absolute;
   inset: 0;
   background: radial-gradient(
@@ -196,6 +197,17 @@
     #6b5636 52%,
     #34383c 100%
   );
+}
+
+.portalRevealPhoto {
+  /* camada de cima: a foto real da galeria, nascendo em opacity:0 (JS) e
+     dissolvendo pra 1 só nos últimos 40% do mergulho — ver ATO 3 */
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 50%;
 }
 
 .heroScrim {

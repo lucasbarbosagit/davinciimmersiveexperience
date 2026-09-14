@@ -92,6 +92,7 @@ export default function Hero() {
   const portalFadeRef = useRef<HTMLDivElement>(null);
   const orbGlowRef = useRef<HTMLDivElement>(null);
   const portalRevealRef = useRef<HTMLDivElement>(null);
+  const portalGalleryRef = useRef<HTMLImageElement>(null);
   const canvasHandleRef = useRef<ArtworkCanvasHandle>(null);
   const lenis = useLenis();
   // o timeline do mergulho (mais abaixo) monta uma vez só ([] de
@@ -168,12 +169,15 @@ export default function Hero() {
 
     const ctx = gsap.context(() => {
       // a janela do portal (clip-path) acompanha a porta desde o primeiro
-      // tick, crescendo em raio zero -> tela cheia — mas o que ela revela
-      // NÃO é mais a galeria em si (ver comentário grande mais abaixo,
-      // no JSX, sobre por que essa prévia foi removida)
+      // tick, crescendo em raio zero -> tela cheia. O que ela revela
+      // COMEÇA sendo só o brilho (gradiente, ver CSS) e nos últimos 40%
+      // do mergulho DISSOLVE pra foto real da galeria (ver ATO 2 mais
+      // abaixo) — luz que se resolve na sala, um dissolve só, não duas
+      // aparições separadas (ver comentário grande no JSX)
       gsap.set(portalRevealRef.current, {
         clipPath: "circle(0vh at 50% 50%)",
       });
+      gsap.set(portalGalleryRef.current, { opacity: 0 });
       // p normalizado 0->1; o zoom real vem da porta ativa no onUpdate,
       // então cada obra mergulha até a profundidade da própria porta
       const progState = { p: 0 };
@@ -395,28 +399,22 @@ export default function Hero() {
               },
               0,
             )
-            // SEM ATO 3 e SEM ATO 4 de propósito — os dois já existiram
-            // aqui e os dois causaram, de formas diferentes, a MESMA
-            // queixa: "aparece uma primeira galeria, depois a de
-            // verdade". ATO 3 fazia a foto da galeria se materializar
-            // dentro da janela do portal ainda com o nav visível, ainda
-            // dentro do Hero — e por melhor que essa foto batesse pixel a
-            // pixel com o repouso da GallerySection (ela batia: mesma
-            // imagem, mesmo enquadramento), o usuário via duas vezes o
-            // MESMO ato de "a obra aparece": uma vez dentro do portal,
-            // outra vez quando a seção de verdade prendia. Trocar por um
-            // véu escuro no fim (o antigo ATO 4) só adiava o problema:
-            // imagem aparece -> escurece -> reaparece já é a mesma queixa
-            // com um blackout no meio. A correção de verdade não é
-            // esconder OU casar melhor a emenda — é a janela do portal
-            // não revelar a galeria NENHUMA vez. Ela cresce (o clip-path
-            // ainda acompanha a porta, ver progState acima) revelando só
-            // o brilho quente do próprio portalRevealMedia (um gradiente,
-            // sem foto nenhuma — ver CSS), então o mergulho termina num
-            // círculo de luz cheio de tela, não numa prévia da sala. A
-            // ÚNICA vez que a galeria aparece é quando o pin dela prende
-            // de verdade, logo depois do salto de onLeave — uma chegada
-            // só, em vez de duas.
+            // ATO 3 (0.6 -> 1): a luz DISSOLVE na foto real da galeria —
+            // não "aparece" de repente (isso é que lia como uma segunda
+            // chegada separada da primeira, com o antigo ATO 3): é um
+            // dissolve contínuo, o mesmo brilho quente por trás ainda
+            // visível através da foto enquanto ela ganha opacidade, então
+            // no momento em que o pin solta e o auto-snap (onLeave, mais
+            // acima) pula o scroll pro início do pin da galeria, a tela
+            // já está 100% na MESMA foto, no MESMO enquadramento do
+            // repouso da GallerySection — o salto de scroll fica
+            // invisível, e a única coisa que o usuário viu foi luz virando
+            // sala, uma vez só, sem corte
+            .to(
+              portalGalleryRef.current,
+              { opacity: 1, ease: "none", duration: 0.4 },
+              0.6,
+            );
         },
       );
 
@@ -515,25 +513,36 @@ export default function Hero() {
           heroMedia (não herda o scale) porque o próprio raio já é animado
           em sincronia com o zoom da obra.
 
-          NÃO revela mais a galeria (nem foto, nem crop da obra): chegou a
-          mostrar a instalação da galeria de verdade aqui dentro, pixel a
-          pixel igual ao repouso da GallerySection — e mesmo batendo
-          perfeitamente, o usuário via a obra "chegar" duas vezes, uma vez
-          aqui (ainda com o nav visível, ainda dentro do Hero) e de novo
-          quando o pin da galeria prendia de verdade. Tentar esconder essa
-          repetição com um véu escuro no fim virava a MESMA queixa com um
-          blackout no meio: aparece, escurece, aparece de novo. A correção
-          foi tirar a foto da galeria daqui — portalRevealMedia agora é só
-          um gradiente (o brilho quente do mergulho, ver CSS), sem cenário
-          nenhum por trás. A única vez que a galeria some do escuro é
-          quando o pin dela prende de verdade, logo após o salto de
-          onLeave (acima) — uma chegada só, não duas */}
+          Duas camadas dentro: o gradiente (portalRevealMedia, o brilho
+          quente do mergulho) embaixo, e a foto real da galeria em cima,
+          nascendo em opacity:0 e DISSOLVENDO pra 1 só nos últimos 40% do
+          mergulho (ver ATO 3 no useIsomorphicLayoutEffect). Chegou a
+          existir uma versão que só mostrava o gradiente, sem foto nenhuma
+          — pra evitar a obra "chegando" duas vezes (uma aqui, outra na
+          GallerySection de verdade) — mas isso trocou uma emenda ruim por
+          outra: cortava do brilho pra dentro da galeria com uma borda
+          dura, sem transição nenhuma. A diferença agora é que ISSO É UM
+          DISSOLVE, não um "materializa": a foto some por trás do brilho
+          quente até bem tarde no mergulho e emerge aos poucos — não é a
+          galeria aparecendo como um evento próprio, é o brilho SE
+          TORNANDO a galeria, um gesto só. Tem que ser a instalação da
+          galeria (gallery-bg-salvator), pixel a pixel igual ao repouso da
+          GallerySection — assim, quando o pin solta e o auto-snap (onLeave)
+          pula o scroll, a tela já está exatamente na mesma foto: o corte
+          de scroll fica invisível por trás do dissolve que já terminou */}
       <div
         className={styles.portalReveal}
         ref={portalRevealRef}
         role="presentation"
       >
         <div className={styles.portalRevealMedia} />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          className={styles.portalRevealPhoto}
+          ref={portalGalleryRef}
+          src="/assets/gallery-bg-salvator.jpg"
+          alt=""
+        />
       </div>
 
       <div className={styles.portalFade} ref={portalFadeRef} />
