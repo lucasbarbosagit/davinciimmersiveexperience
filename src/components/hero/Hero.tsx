@@ -296,33 +296,31 @@ export default function Hero() {
                       (st.vars.trigger as HTMLElement | undefined)?.id === "galeria",
                   );
                   if (!galleryTrigger) return;
-                  // onLeave dispara de dentro do próprio ciclo de emit()
-                  // do Lenis (é o "scroll" event dele que chama
-                  // ScrollTrigger.update()) — chamar scrollTo AQUI DENTRO,
-                  // ainda no mesmo tick, reentra no Animate interno do
-                  // Lenis no meio do próprio advance() que originou esse
-                  // emit. Isso quebra de DUAS formas diferentes, não só
-                  // uma: às vezes o tween novo nasce mas não anda nada
-                  // (fica preso exatamente onde o mergulho terminou);
-                  // outras vezes ele ANDA, só que é abandonado no meio do
-                  // caminho por causa do momentum que sobrou do wheel (ex:
-                  // medido chegando a 1322 de um alvo 1440 e travando ali
-                  // pra sempre, nunca completando) — essa segunda forma é
-                  // pior: para na correção antiga (que só verificava "se
-                  // moveu"), porque tecnicamente MOVEU, só que não chegou.
-                  // A verificação certa é "chegou no alvo", não "saiu do
-                  // lugar" — e insiste tentando de novo (a partir de onde
-                  // quer que tenha parado) até realmente chegar
+                  // Três tentativas diferentes de "saltar suave" (via
+                  // lenis.scrollTo com easing, com e sem retry) já vieram
+                  // e foram embora daqui, e uma quarta tentativa (pular
+                  // via window.scrollTo cru + lenis.resize() pra
+                  // ressincronizar) TAMBÉM quebrou — mas de um jeito
+                  // diferente e mais claro: funcionava por um instante
+                  // (confirmado via log: scrollY chegava no alvo), só que
+                  // o tween ANTIGO do próprio Lenis (ainda rodando, ainda
+                  // perseguindo o alvo de ANTES desse wheel ter cruzado a
+                  // linha) sobrescrevia de novo no frame seguinte — porque
+                  // resize() reseta animatedScroll/targetScroll mas NÃO
+                  // pára o Animate interno que já estava em voo.
+                  //
+                  // lenis.scrollTo(target, {immediate:true}) resolve as
+                  // duas pontas de uma vez: por dentro ele chama
+                  // reset(), que TANTO realinha animatedScroll/
+                  // targetScroll quanto para de vez (animate.stop()) o
+                  // tween antigo — sem criar um tween novo no lugar (por
+                  // isso não reentra no Animate como as versões com
+                  // easing reentravam). Não sobra nada rodando que possa
+                  // "ganhar" no próximo frame e puxar o scroll de volta
                   const target = galleryTrigger.start;
-                  const trySnap = (attempt: number) => {
-                    lenisRef.current?.scrollTo(target, { duration: 0.6 });
-                    if (attempt >= 6) return;
-                    setTimeout(() => {
-                      const arrived = Math.abs(window.scrollY - target) <= 2;
-                      if (!arrived) trySnap(attempt + 1);
-                    }, 250);
-                  };
-                  requestAnimationFrame(() => trySnap(1));
+                  requestAnimationFrame(() => {
+                    lenisRef.current?.scrollTo(target, { immediate: true });
+                  });
                 },
               },
             })
