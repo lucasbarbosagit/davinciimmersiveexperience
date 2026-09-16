@@ -39,3 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# renders intermediários do blender (frames soltos, não o mp4 final)
+/blender/renders/

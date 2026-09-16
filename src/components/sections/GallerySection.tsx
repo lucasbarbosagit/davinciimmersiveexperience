@@ -6,101 +6,75 @@ import { useIsomorphicLayoutEffect } from "@/hooks/useIsomorphicLayoutEffect";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
 import styles from "./GallerySection.module.css";
 
-// TESTE com só 2 obras — a ideia é sentir o ritmo do scroll antes de
-// gerar as outras 2. `bg` é a instalação de museu inteira já pronta
-// (parede + quadro + pedestal, gerada por IA, sem 3D nenhum aqui
-// dentro); `thumb` é o recorte só da obra, usado na grade estática do
-// fallback reduced-motion. `anchor` é onde a placa de legenda ancora,
-// em % da tela — calibrado a olho olhando pra cada imagem; ajusta
-// depois que as reais estiverem prontas.
+// o corredor inteiro é UM vídeo só, renderizado em Blender com uma
+// câmera real percorrendo o espaço em ziguezague — cada obra fica numa
+// parede de FUNDO, de frente pra câmera que chega (ver
+// blender/full_gallery.py). O scroll só controla o `currentTime` desse
+// vídeo, igual à técnica de scroll-scrub da referência (austinwerner.io).
+// TESTE com só 2 obras de propósito — validar o ritmo do ziguezague
+// antes de renderizar o corredor completo (ver conversa: já foi tentado
+// com corredor reto + quadros na parede LATERAL, ficava tudo de esguelha).
+const FLYTHROUGH_SRC = "/assets/gallery-flythrough.mp4";
+
+// janelas de "parada" (em progresso 0-1) onde a câmera fica parada em
+// frente a cada obra — espelham EXATAMENTE os frames de hold calculados
+// no script do Blender (FPS=24, HOLD_F=43, TRANS_F=53, total=140 frames),
+// convertidos pra fração: stop N ocupa [holdStart/140, holdEnd/140]
 const GALLERY_WORKS = [
   {
-    bg: "/assets/gallery-bg-salvator.jpg",
     thumb: "/assets/salvator-mundi.jpg",
     name: "Salvator Mundi",
     year: "c. 1500",
     artist: "Leonardo da Vinci (atribuído)",
     medium: "Óleo sobre painel de nogueira",
     desc: "Cristo Salvador do Mundo: a mão direita em bênção, a esquerda segura um orbe de cristal — o mundo refletido em miniatura.",
-    anchor: { x: 17, y: 42 },
+    hold: [1 / 140, 44 / 140] as [number, number],
   },
   {
-    bg: "/assets/gallery-bg-gioconda.jpg",
     thumb: "/assets/gioconda_only.jpeg",
     name: "La Gioconda",
     year: "1503 – 1519",
     artist: "Leonardo da Vinci",
     medium: "Óleo sobre álamo",
     desc: "O retrato mais estudado da história da arte. O sfumato dissolve os contornos e deixa o sorriso em aberto.",
-    anchor: { x: 52, y: 36 },
+    hold: [97 / 140, 140 / 140] as [number, number],
   },
 ];
 
-// quanto cada instalação "aproxima" (Ken Burns) enquanto está em cena —
-// calmo (ZOOM_FROM) bem no auge, mais zoom quanto mais longe do auge
-// (crossfade fica mais "vivo" que o repouso)
-const ZOOM_FROM = 1.0;
-const ZOOM_TO = 1.14;
-// deslocamento lateral no mesmo ritmo do zoom, com sinal alternado por
-// obra — é o zig-zag que substitui a curva em S de verdade
-const PAN_VW = 3.2;
-// fração de cada trecho (entre um pico e o próximo) que fica PARADA,
-// nítida, antes/depois do crossfade — sem isso é troca contínua o
-// tempo todo, sem nunca "chegar e ver" de verdade
-const HOLD_FRAC = 0.32;
-// metade da janela (em progresso 0-1) onde a legenda de cada obra fica
-// acesa, centrada no auge dela
-const CAPTION_HALF_WINDOW = 0.22;
-// quanto scroll (em % de viewport) cada trecho entre duas obras consome
 const VH_PER_SEGMENT = 160;
+// fade da legenda nas bordas da janela de hold, em fração de progresso
+const CAPTION_FADE = 0.035;
 
-function smoothstep(t: number) {
-  return t * t * (3 - 2 * t);
-}
-
-// avanço 0->1 dentro de um trecho entre dois picos, com um patamar
-// parado nas pontas (HOLD_FRAC de cada lado) e crossfade suave só no meio
-function segmentEase(u: number) {
-  if (u <= HOLD_FRAC) return 0;
-  if (u >= 1 - HOLD_FRAC) return 1;
-  const span = 1 - 2 * HOLD_FRAC;
-  return smoothstep((u - HOLD_FRAC) / span);
+function captionOpacity(hold: [number, number], p: number) {
+  const [start, end] = hold;
+  if (p < start - CAPTION_FADE || p > end + CAPTION_FADE) return 0;
+  if (p < start) return (p - (start - CAPTION_FADE)) / CAPTION_FADE;
+  if (p > end) return 1 - (p - end) / CAPTION_FADE;
+  return 1;
 }
 
 export default function GallerySection() {
   const sectionRef = useRef<HTMLElement>(null);
-  const slideRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const videoRef = useRef<HTMLVideoElement>(null);
   const captionRefs = useRef<(HTMLDivElement | null)[]>([]);
   const prefersReducedMotion = usePrefersReducedMotion();
 
   useIsomorphicLayoutEffect(() => {
     if (prefersReducedMotion) return;
     const section = sectionRef.current;
+    const video = videoRef.current;
     const siteNav = document.getElementById("site-nav");
     const siteDeskNav = document.getElementById("site-desk-nav");
-    if (!section) return;
+    if (!section || !video) return;
 
-    const N = GALLERY_WORKS.length;
-    // picos igualmente espaçados 0..1, um por obra — o "auge" de cada
-    // instalação, igual ao conceito de peaks da versão 3D, só que agora
-    // driblando opacidade/escala em vez de câmera
-    const peaks = N > 1 ? GALLERY_WORKS.map((_, i) => i / (N - 1)) : [0];
-    const gap = N > 1 ? peaks[1] - peaks[0] : 1;
-    const zoomRange = gap * 0.85;
+    let duration = 0;
+    let lastSetTime = -1;
 
-    // presença (0-1) da obra i num progresso p: sobe do vizinho da
-    // esquerda até o próprio pico, desce até o vizinho da direita — só
-    // olha pro vizinho relevante, sem contar duas vezes o mesmo trecho
-    function presenceOf(i: number, p: number) {
-      if (p < peaks[i]) {
-        if (i === 0) return 1;
-        const u = (p - peaks[i - 1]) / (peaks[i] - peaks[i - 1]);
-        return segmentEase(gsap.utils.clamp(0, 1, u));
-      }
-      if (i === N - 1) return 1;
-      const u = (p - peaks[i]) / (peaks[i + 1] - peaks[i]);
-      return 1 - segmentEase(gsap.utils.clamp(0, 1, u));
-    }
+    const onLoadedMetadata = () => {
+      duration = video.duration || 0;
+    };
+    video.addEventListener("loadedmetadata", onLoadedMetadata);
+    if (video.readyState >= 1) onLoadedMetadata();
 
     let navRevealed = false;
     const revealNav = () => {
@@ -112,40 +86,37 @@ export default function GallerySection() {
     function updateFrame(progress: number) {
       const p = gsap.utils.clamp(0, 1, progress);
 
-      slideRefs.current.forEach((el, i) => {
+      if (duration > 0) {
+        const target = p * duration;
+        // seeks demais no mesmo instante travam o decode em alguns
+        // browsers — só reposiciona se o alvo realmente mudou
+        if (Math.abs(target - lastSetTime) > 1 / 60) {
+          video!.currentTime = Math.min(target, duration - 0.001);
+          lastSetTime = target;
+        }
+      }
+
+      GALLERY_WORKS.forEach((work, i) => {
+        const el = captionRefs.current[i];
         if (!el) return;
-        const dist = p - peaks[i];
-        const t = gsap.utils.clamp(-1, 1, dist / zoomRange);
-        const scale = ZOOM_FROM + (ZOOM_TO - ZOOM_FROM) * Math.abs(t);
-        const side = i % 2 === 0 ? 1 : -1;
-        const panVw = PAN_VW * t * side;
-        el.style.opacity = String(presenceOf(i, p));
-        el.style.transform = `scale(${scale}) translateX(${panVw}vw)`;
+        el.style.opacity = String(captionOpacity(work.hold, p));
       });
 
-      captionRefs.current.forEach((el, i) => {
-        if (!el) return;
-        const dist = Math.abs(p - peaks[i]);
-        const o = Math.max(0, 1 - dist / CAPTION_HALF_WINDOW);
-        el.style.opacity = String(o);
-      });
-
-      // só reaparece perto do fim da caminhada — o menu por cima da
-      // galeria tirava a imersão pedida
-      if (p > 0.94) revealNav();
+      if (p > 0.96) revealNav();
     }
     updateFrame(0);
 
     const trigger = ScrollTrigger.create({
       trigger: section,
       start: "top top",
-      end: `+=${Math.max(1, N - 1) * VH_PER_SEGMENT}%`,
+      end: `+=${(GALLERY_WORKS.length - 1) * VH_PER_SEGMENT}%`,
       scrub: true,
       pin: true,
       onUpdate: (self) => updateFrame(self.progress),
     });
 
     return () => {
+      video.removeEventListener("loadedmetadata", onLoadedMetadata);
       trigger.kill();
     };
   }, [prefersReducedMotion]);
@@ -157,7 +128,7 @@ export default function GallerySection() {
         <h2>As obras da jornada</h2>
         <div className={styles.fallbackGrid}>
           {GALLERY_WORKS.map((work) => (
-            <figure key={work.bg} className={styles.fallbackItem}>
+            <figure key={work.name} className={styles.fallbackItem}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={work.thumb} alt={work.name} />
               <figcaption>
@@ -174,25 +145,20 @@ export default function GallerySection() {
   return (
     <section className={styles.galleryPin} id="galeria" ref={sectionRef}>
       <div className={styles.galleryStage}>
-        {GALLERY_WORKS.map((work, i) => (
-          <div
-            key={work.bg}
-            className={styles.slide}
-            ref={(el) => {
-              slideRefs.current[i] = el;
-            }}
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={work.bg} alt={work.name} className={styles.slideImg} />
-          </div>
-        ))}
+        <video
+          ref={videoRef}
+          className={styles.slideImg}
+          src={FLYTHROUGH_SRC}
+          muted
+          playsInline
+          preload="auto"
+        />
       </div>
       <div className={styles.galleryScrim} />
       {GALLERY_WORKS.map((work, i) => (
         <div
-          key={work.bg}
+          key={work.name}
           className={styles.caption}
-          style={{ left: `${work.anchor.x}%`, top: `${work.anchor.y}%` }}
           ref={(el) => {
             captionRefs.current[i] = el;
           }}

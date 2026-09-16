@@ -525,10 +525,12 @@ export default function Hero() {
           quente até bem tarde no mergulho e emerge aos poucos — não é a
           galeria aparecendo como um evento próprio, é o brilho SE
           TORNANDO a galeria, um gesto só. Tem que ser a instalação da
-          galeria (gallery-bg-salvator), pixel a pixel igual ao repouso da
-          GallerySection — assim, quando o pin solta e o auto-snap (onLeave)
-          pula o scroll, a tela já está exatamente na mesma foto: o corte
-          de scroll fica invisível por trás do dissolve que já terminou */}
+          galeria (gallery-corridor-frame1, o frame 0 exportado do
+          render em blender/full_gallery.py), pixel a pixel igual ao
+          repouso do vídeo da GallerySection (currentTime 0) — assim,
+          quando o pin solta e o auto-snap (onLeave) pula o scroll, a
+          tela já está exatamente na mesma imagem: o corte de scroll
+          fica invisível por trás do dissolve que já terminou */}
       <div
         className={styles.portalReveal}
         ref={portalRevealRef}
@@ -539,7 +541,7 @@ export default function Hero() {
         <img
           className={styles.portalRevealPhoto}
           ref={portalGalleryRef}
-          src="/assets/gallery-bg-salvator.jpg"
+          src="/assets/gallery-corridor-frame1.png"
           alt=""
         />
       </div>
