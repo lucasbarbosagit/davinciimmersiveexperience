@@ -293,7 +293,8 @@ export default function Hero() {
                   const galleryTrigger = ScrollTrigger.getAll().find(
                     (st) =>
                       st.vars.pin &&
-                      (st.vars.trigger as HTMLElement | undefined)?.id === "galeria",
+                      (st.vars.trigger as HTMLElement | undefined)?.id ===
+                        "galeria",
                   );
                   if (!galleryTrigger) return;
                   // Três tentativas diferentes de "saltar suave" (via
@@ -524,13 +525,15 @@ export default function Hero() {
           DISSOLVE, não um "materializa": a foto some por trás do brilho
           quente até bem tarde no mergulho e emerge aos poucos — não é a
           galeria aparecendo como um evento próprio, é o brilho SE
-          TORNANDO a galeria, um gesto só. Tem que ser a instalação da
-          galeria (gallery-corridor-frame1, o frame 0 exportado do
-          render em blender/full_gallery.py), pixel a pixel igual ao
-          repouso do vídeo da GallerySection (currentTime 0) — assim,
-          quando o pin solta e o auto-snap (onLeave) pula o scroll, a
-          tela já está exatamente na mesma imagem: o corte de scroll
-          fica invisível por trás do dissolve que já terminou */}
+          TORNANDO a galeria, um gesto só. Tem que ser o saguão de
+          entrada (gallery-corridor-frame1), a MESMA imagem, com o mesmo
+          enquadramento, que a GallerySection mostra no início do pin
+          (fase de abertura, antes do vídeo do corredor) — assim, quando
+          o pin solta e o auto-snap (onLeave) pula o scroll, a tela já
+          está exatamente na mesma imagem: o corte de scroll fica
+          invisível por trás do dissolve que já terminou. Dali a
+          GallerySection dá zoom na passagem e dissolve no corredor
+          renderizado */}
       <div
         className={styles.portalReveal}
         ref={portalRevealRef}
@@ -541,7 +544,7 @@ export default function Hero() {
         <img
           className={styles.portalRevealPhoto}
           ref={portalGalleryRef}
-          src="/assets/gallery-corridor-frame1.png"
+          src="/assets/gallery-corridor-frame1.jfif"
           alt=""
         />
       </div>
@@ -593,7 +596,6 @@ export default function Hero() {
         <span>role para explorar</span>
         <span className={styles.line} />
       </div>
-
     </section>
   );
 }
