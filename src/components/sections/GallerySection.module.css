@@ -28,51 +28,66 @@
   display: block;
 }
 
-.strip {
-  /* duas telas empilhadas (saguão em cima, corredor embaixo); o JS só
-     desloca a faixa inteira em translateY conforme o scroll */
+.coverBox {
+  /* a mesma caixa que o <video> ocupa em object-fit: cover (16:9 cobrindo
+     a tela, centrado, excesso cortado): o que fica dentro dela acompanha
+     a imagem do render em qualquer proporção de viewport */
   position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 200%;
-  will-change: transform;
-}
-
-.panel {
-  position: relative;
-  width: 100%;
-  height: 50%;
-  overflow: hidden;
-}
-
-.videoInner {
-  width: 100%;
-  height: 100%;
-  transform-origin: 50% 50%;
-  will-change: transform;
-}
-
-.seamFade {
-  /* o topo do render é um pouco mais claro que o pé do saguão; este
-     degradê escuro na borda de cima esconde o degrau de brilho na junção */
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 22%;
-  background: linear-gradient(180deg, rgba(3, 3, 3, 0.7), rgba(3, 3, 3, 0));
+  left: 50%;
+  top: 50%;
+  width: max(100%, 100vh * 16 / 9);
+  aspect-ratio: 16 / 9;
+  min-height: 100%;
+  transform: translate(-50%, -50%);
+  container-type: size;
   pointer-events: none;
+  z-index: 2;
 }
 
-.lobbyImg {
-  /* mesmo enquadramento de .portalRevealPhoto no Hero (cover, centrado):
-     é o que faz o handoff Hero -> galeria ser pixel a pixel igual */
+.lobbyTitle {
+  /* no vão de concreto entre os painéis do alto e a porta do saguão
+     (~41%..49% da altura do frame 1) — o texto ocupa a parede, como
+     sinalização de museu, não um título flutuando por cima da cena */
+  position: absolute;
+  left: 50%;
+  top: 44.5%;
   width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: 50% 50%;
-  display: block;
+  transform: translate3d(-50%, -50%, 0);
+  transform-origin: 50% 50%;
+  text-align: center;
+  opacity: 0;
+  will-change: transform, opacity;
+}
+
+.lobbyTitle h2 {
+  font-family: var(--font-serif), serif;
+  font-weight: 500;
+  font-size: 3.1cqw;
+  line-height: 1;
+  text-transform: uppercase;
+  color: var(--cream);
+  text-shadow: 0 0.15cqw 1.2cqw rgba(0, 0, 0, 0.75);
+}
+
+.lobbyTitle p {
+  margin-top: 0.7cqw;
+  font-family: var(--font-serif), serif;
+  font-size: 1.35cqw;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--gold-soft);
+  text-shadow: 0 0.1cqw 0.8cqw rgba(0, 0, 0, 0.8);
+}
+
+.inkFade {
+  /* o fim do render é quase preto; isto completa até o tom exato do
+     fundo da página, pra a seção seguinte nascer do mesmo escuro */
+  position: absolute;
+  inset: 0;
+  background: var(--ink);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 4;
 }
 
 .galleryScrim {
@@ -86,7 +101,8 @@
     rgba(6, 5, 3, 0.55) 100%
   );
   pointer-events: none;
-  z-index: 2;
+  opacity: 0;
+  z-index: 1;
 }
 
 .caption {

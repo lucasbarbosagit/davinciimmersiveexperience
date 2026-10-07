@@ -3,7 +3,7 @@ import os
 import imageio.v2 as imageio
 
 ROOT = r"C:\Users\lucas\Desktop\Nova pasta"
-SEQ_DIR = os.path.join(ROOT, "blender", "renders", "sequence")
+SEQ_DIR = os.path.join(ROOT, "blender", "renders", os.environ.get("GALLERY_SEQ_DIR", "sequence_v2"))
 OUT = os.path.join(ROOT, "public", "assets", "gallery-flythrough.mp4")
 FPS = 24
 

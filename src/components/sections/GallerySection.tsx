@@ -6,21 +6,32 @@ import { gsap, ScrollTrigger } from "@/lib/gsap";
 import { useIsomorphicLayoutEffect } from "@/hooks/useIsomorphicLayoutEffect";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
 import styles from "./GallerySection.module.css";
+import timing from "./gallery-timing.json";
 
-// o corredor inteiro é UM vídeo só, renderizado em Blender com uma
-// câmera real percorrendo o espaço em ziguezague — cada obra fica numa
-// parede de FUNDO, de frente pra câmera que chega (ver
-// blender/full_gallery.py). O scroll só controla o `currentTime` desse
-// vídeo, igual à técnica de scroll-scrub da referência (austinwerner.io).
-// TESTE com só 2 obras de propósito — validar o ritmo do ziguezague
-// antes de renderizar o corredor completo (ver conversa: já foi tentado
-// com corredor reto + quadros na parede LATERAL, ficava tudo de esguelha).
+// a galeria inteira é UM vídeo só, renderizado em Blender com uma câmera
+// real (ver blender/full_gallery.py): abre parada no saguão — o MESMO
+// frame em que o Hero dissolve no fim do mergulho —, desce a passarela,
+// atravessa a porta pro corredor, para diante de cada obra e sai por um
+// último trecho sem luz, afundando no escuro. O scroll só controla o
+// `currentTime`, igual à técnica de scroll-scrub da referência
+// (austinwerner.io). Não existe emenda entre saguão e corredor pra
+// esconder: é o mesmo espaço 3D, a mesma câmera.
 const FLYTHROUGH_SRC = "/assets/gallery-flythrough.mp4";
+// frame 1 do render, exportado: é o poster do vídeo (tela nunca fica
+// vazia enquanto ele carrega) e a imagem final do mergulho do Hero
+const LOBBY_POSTER = "/assets/gallery-lobby.jpg";
 
-// janelas de "parada" (em progresso 0-1) onde a câmera fica parada em
-// frente a cada obra — espelham EXATAMENTE os frames de hold calculados
-// no script do Blender (FPS=24, HOLD_F=43, TRANS_F=53, total=140 frames),
-// convertidos pra fração: stop N ocupa [holdStart/140, holdEnd/140]
+// as janelas de parada de cada obra e os marcos da câmera (fim do
+// respiro no saguão, entrada na saída) saem do próprio script do
+// Blender, que grava esse JSON junto do render
+const {
+  fps: FPS,
+  frames: TOTAL_FRAMES,
+  lobbyHoldEnd: LOBBY_HOLD_END,
+  exitFrame: EXIT_FRAME,
+} = timing;
+const STOPS = timing.stops.map(([start, end]) => [start, end] as [number, number]);
+
 const GALLERY_WORKS = [
   {
     thumb: "/assets/salvator-mundi.jpg",
@@ -29,7 +40,7 @@ const GALLERY_WORKS = [
     artist: "Leonardo da Vinci (atribuído)",
     medium: "Óleo sobre painel de nogueira",
     desc: "Cristo Salvador do Mundo: a mão direita em bênção, a esquerda segura um orbe de cristal — o mundo refletido em miniatura.",
-    hold: [1 / 140, 44 / 140] as [number, number],
+    hold: STOPS[0],
   },
   {
     thumb: "/assets/gioconda_only.jpeg",
@@ -38,44 +49,37 @@ const GALLERY_WORKS = [
     artist: "Leonardo da Vinci",
     medium: "Óleo sobre álamo",
     desc: "O retrato mais estudado da história da arte. O sfumato dissolve os contornos e deixa o sorriso em aberto.",
-    hold: [97 / 140, 140 / 140] as [number, number],
+    hold: STOPS[1],
   },
 ];
 
-const VH_PER_SEGMENT = 160;
-// fade da legenda nas bordas da janela de hold, em fração de progresso
-const CAPTION_FADE = 0.035;
+// ritmo do scrub: quanto de scroll (em % da altura da tela) cada frame
+// do vídeo consome — o mesmo passo da v1 do corredor, que já estava bom
+const VH_PER_FRAME = 1.15;
+// respiro no frame 1 antes do vídeo andar: é aqui que o título entra.
+// O Hero solta o pin exatamente neste frame, então a primeira coisa que
+// o scroll faz na galeria é "chegar" (título), não "andar"
+const DWELL_VH = 45;
+// fade da legenda nas bordas da janela de hold, em frames
+const CAPTION_FADE_F = 5;
 
-// abertura da galeria: a imagem do saguão (a MESMA que o Hero dissolve no
-// fim do mergulho, ver Hero.tsx) e o vídeo do corredor formam uma faixa
-// vertical contínua — saguão em cima, corredor embaixo, com o pé do
-// saguão (guarda-corpos canelados, chão escuro) emendando direto no topo
-// do corredor (paredes canteladas). A abertura é só rolar essa faixa
-// 100vh pra cima, 1:1 com o scroll, como rolagem normal de página.
-const LOBBY_SRC = "/assets/gallery-corridor-frame1.jfif";
-const INTRO_VH = 100;
-// proporções das duas mídias: o vídeo é ampliado (fitScale, ver abaixo)
-// pra ficar da mesma largura que o saguão na tela, senão os guarda-corpos
-// de um não alinham com as paredes do outro na emenda
-const LOBBY_ASPECT = 1441 / 720;
-const VIDEO_ASPECT = 16 / 9;
-// o ajuste de escala do vídeo relaxa pra 1 nesse trecho inicial do vídeo
-const FIT_RELAX_P = 0.25;
-
-function captionOpacity(hold: [number, number], p: number) {
+function captionOpacity(hold: [number, number], f: number) {
   const [start, end] = hold;
-  if (p < start - CAPTION_FADE || p > end + CAPTION_FADE) return 0;
-  if (p < start) return (p - (start - CAPTION_FADE)) / CAPTION_FADE;
-  if (p > end) return 1 - (p - end) / CAPTION_FADE;
+  if (f < start - CAPTION_FADE_F || f > end + CAPTION_FADE_F) return 0;
+  if (f < start) return (f - (start - CAPTION_FADE_F)) / CAPTION_FADE_F;
+  if (f > end) return 1 - (f - end) / CAPTION_FADE_F;
   return 1;
 }
+
+// 0 -> 1 linear entre a e b, preso nas pontas
+const ramp = (a: number, b: number, x: number) =>
+  Math.min(1, Math.max(0, (x - a) / (b - a)));
 
 export default function GallerySection() {
   const sectionRef = useRef<HTMLElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
-  const stripRef = useRef<HTMLDivElement>(null);
-  const videoInnerRef = useRef<HTMLDivElement>(null);
-  const seamRef = useRef<HTMLDivElement>(null);
+  const titleRef = useRef<HTMLDivElement>(null);
+  const inkRef = useRef<HTMLDivElement>(null);
   const scrimRef = useRef<HTMLDivElement>(null);
   const captionRefs = useRef<(HTMLDivElement | null)[]>([]);
   const prefersReducedMotion = usePrefersReducedMotion();
@@ -87,7 +91,8 @@ export default function GallerySection() {
 
   // espelho do auto-snap do Hero (onLeave lá): entre o fim do pin do Hero
   // e o início do pin desta seção sobra um vão de scroll onde o saguão do
-  // fim do mergulho sobe e este mesmo saguão entra por baixo. Na ida o
+  // fim do mergulho sobe e o frame 1 deste vídeo (a mesma imagem) entra
+  // por baixo. Na ida o
   // Hero pula o vão; na volta apareciam as duas imagens iguais
   // empilhadas. Rolando PRA CIMA dentro do vão, salta pro fim do pin do
   // Hero (mergulho completo = a mesma imagem em tela cheia, invisível).
@@ -138,69 +143,62 @@ export default function GallerySection() {
       gsap.to([siteNav, siteDeskNav], { autoAlpha: 1, duration: 0.5, ease: "none" });
     };
 
-    const strip = stripRef.current;
-    const videoInner = videoInnerRef.current;
+    const title = titleRef.current;
+    const ink = inkRef.current;
     const scrim = scrimRef.current;
-    const seam = seamRef.current;
-    const videoVh = (GALLERY_WORKS.length - 1) * VH_PER_SEGMENT;
-    const totalVh = INTRO_VH + videoVh;
-    const introFrac = INTRO_VH / totalVh;
-
-    let fitScale = 1;
-    const measure = () => {
-      const vw = section.clientWidth;
-      const vh = section.clientHeight;
-      fitScale =
-        Math.max(vw, vh * LOBBY_ASPECT) / Math.max(vw, vh * VIDEO_ASPECT);
-    };
-    measure();
+    const framesVh = (TOTAL_FRAMES - 1) * VH_PER_FRAME;
+    const totalVh = DWELL_VH + framesVh;
+    const dwellFrac = DWELL_VH / totalVh;
 
     function updateFrame(progress: number) {
       const overall = gsap.utils.clamp(0, 1, progress);
-      // q: 0->1 durante a abertura (faixa rolando); p: 0->1 durante o
-      // vídeo. Cada fase só anda na sua própria fatia do scroll
-      const q = Math.min(1, overall / introFrac);
-      const p = Math.max(0, (overall - introFrac) / (1 - introFrac));
-
-      // a faixa tem 200% da altura da tela; -50% dela = exatamente 1 tela
-      if (strip) strip.style.transform = `translate3d(0, ${-q * 50}%, 0)`;
-      if (videoInner) {
-        const relax = 1 - gsap.utils.clamp(0, 1, p / FIT_RELAX_P);
-        videoInner.style.transform = `scale(${1 + (fitScale - 1) * relax})`;
-      }
-      // o degradê da emenda só existe enquanto a junção está na tela
-      if (seam) seam.style.opacity = String(1 - gsap.utils.clamp(0, 1, (q - 0.8) / 0.2));
-      // a vinheta só entra quando o corredor já cobre a tela: em q=0 a
-      // tela tem que ser pixel a pixel a foto que o Hero deixou
-      if (scrim) scrim.style.opacity = String(gsap.utils.clamp(0, 1, (q - 0.6) / 0.4));
+      const dwell = Math.min(1, overall / dwellFrac);
+      // frame contínuo (1..TOTAL_FRAMES) — a unidade de tudo aqui embaixo,
+      // a mesma do Blender, pra nada precisar de conversão de cabeça
+      const f =
+        1 +
+        Math.max(0, (overall - dwellFrac) / (1 - dwellFrac)) *
+          (TOTAL_FRAMES - 1);
 
       if (duration > 0) {
-        const target = p * duration;
+        // meio-frame de folga: cair exatamente na borda entre dois frames
+        // faz alguns decoders alternarem entre eles no scrub lento
+        const target = Math.min((f - 0.5) / FPS, duration - 0.001);
         // seeks demais no mesmo instante travam o decode em alguns
         // browsers — só reposiciona se o alvo realmente mudou
         if (Math.abs(target - lastSetTime) > 1 / 60) {
-          video!.currentTime = Math.min(target, duration - 0.001);
+          video!.currentTime = target;
           lastSetTime = target;
         }
       }
 
+      if (title) {
+        // entra no respiro (a "chegada"), sai quando a câmera começa a
+        // andar: cresce e sobe junto com a parede, que se aproxima e sobe
+        // no quadro porque a câmera desce a passarela
+        const out = ramp(LOBBY_HOLD_END, LOBBY_HOLD_END + 40, f);
+        title.style.opacity = String(ramp(0.05, 0.75, dwell) * (1 - out));
+        title.style.transform = `translate3d(-50%, ${-50 - out * 45}%, 0) scale(${1 + out * 0.3})`;
+        title.style.letterSpacing = `${(1 - ramp(0.05, 0.9, dwell)) * 0.08}em`;
+      }
+
+      // a vinheta só entra quando a câmera anda: no frame 1 a tela tem que
+      // ser pixel a pixel a imagem em que o mergulho do Hero terminou
+      if (scrim) scrim.style.opacity = String(ramp(LOBBY_HOLD_END, LOBBY_HOLD_END + 30, f));
+
       GALLERY_WORKS.forEach((work, i) => {
         const el = captionRefs.current[i];
-        if (!el) return;
-        // só depois que o vídeo começa: durante a abertura a tela é do saguão
-        const videoStarted = gsap.utils.clamp(0, 1, (overall - introFrac) / 0.03);
-        el.style.opacity = String(captionOpacity(work.hold, p) * videoStarted);
+        if (el) el.style.opacity = String(captionOpacity(work.hold, f));
       });
 
-      if (overall > 0.96) revealNav();
+      // o render termina quase preto, mas não no tom exato do fundo da
+      // seção seguinte — completa até --ink, e o pin solta numa tela que
+      // já é a cor da página: a próxima seção sobe de dentro do escuro
+      if (ink) ink.style.opacity = String(ramp(EXIT_FRAME + 10, TOTAL_FRAMES - 4, f));
+
+      if (f > EXIT_FRAME) revealNav();
     }
     updateFrame(0);
-
-    const onResize = () => {
-      measure();
-      updateFrame(trigger.progress);
-    };
-    window.addEventListener("resize", onResize);
 
     const trigger = ScrollTrigger.create({
       trigger: section,
@@ -213,7 +211,6 @@ export default function GallerySection() {
 
     return () => {
       video.removeEventListener("loadedmetadata", onLoadedMetadata);
-      window.removeEventListener("resize", onResize);
       trigger.kill();
     };
   }, [prefersReducedMotion]);
@@ -242,27 +239,26 @@ export default function GallerySection() {
   return (
     <section className={styles.galleryPin} id="galeria" ref={sectionRef}>
       <div className={styles.galleryStage}>
-        <div className={styles.strip} ref={stripRef}>
-          <div className={styles.panel}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img className={styles.lobbyImg} src={LOBBY_SRC} alt="" />
-          </div>
-          <div className={styles.panel}>
-            <div className={styles.videoInner} ref={videoInnerRef}>
-              <video
-                ref={videoRef}
-                className={styles.slideImg}
-                src={FLYTHROUGH_SRC}
-                muted
-                playsInline
-                preload="auto"
-              />
-            </div>
-            <div className={styles.seamFade} ref={seamRef} />
-          </div>
-        </div>
+        <video
+          ref={videoRef}
+          className={styles.slideImg}
+          src={FLYTHROUGH_SRC}
+          poster={LOBBY_POSTER}
+          muted
+          playsInline
+          preload="auto"
+        />
       </div>
       <div className={styles.galleryScrim} ref={scrimRef} />
+      {/* mesma caixa do vídeo em object-fit: cover — o título fica preso
+          no vão de parede entre os painéis e a porta do saguão em
+          qualquer proporção de tela, não num % da viewport */}
+      <div className={styles.coverBox}>
+        <div className={styles.lobbyTitle} ref={titleRef}>
+          <h2>Inside the mind of the master</h2>
+          <p>Welcome to the Da Vinci&rsquo;s gallery</p>
+        </div>
+      </div>
       {GALLERY_WORKS.map((work, i) => (
         <div
           key={work.name}
@@ -280,6 +276,7 @@ export default function GallerySection() {
           <p className={styles.captionDesc}>{work.desc}</p>
         </div>
       ))}
+      <div className={styles.inkFade} ref={inkRef} />
     </section>
   );
 }

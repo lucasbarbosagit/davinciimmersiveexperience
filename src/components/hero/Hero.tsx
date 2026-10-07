@@ -525,15 +525,14 @@ export default function Hero() {
           DISSOLVE, não um "materializa": a foto some por trás do brilho
           quente até bem tarde no mergulho e emerge aos poucos — não é a
           galeria aparecendo como um evento próprio, é o brilho SE
-          TORNANDO a galeria, um gesto só. Tem que ser o saguão de
-          entrada (gallery-corridor-frame1), a MESMA imagem, com o mesmo
-          enquadramento, que a GallerySection mostra no início do pin
-          (fase de abertura, antes do vídeo do corredor) — assim, quando
-          o pin solta e o auto-snap (onLeave) pula o scroll, a tela já
-          está exatamente na mesma imagem: o corte de scroll fica
-          invisível por trás do dissolve que já terminou. Dali a
-          GallerySection dá zoom na passagem e dissolve no corredor
-          renderizado */}
+          TORNANDO a galeria, um gesto só. Tem que ser o frame 1 do render
+          da galeria (gallery-lobby.jpg, exportado direto da sequência do
+          Blender), com o mesmo enquadramento cover do <video> da
+          GallerySection — assim, quando o pin solta e o auto-snap
+          (onLeave) pula o scroll, a tela já está exatamente na mesma
+          imagem: o corte de scroll fica invisível por trás do dissolve
+          que já terminou. Dali a câmera do próprio vídeo desce a
+          passarela e atravessa a porta pro corredor, sem emenda */}
       <div
         className={styles.portalReveal}
         ref={portalRevealRef}
@@ -544,7 +543,7 @@ export default function Hero() {
         <img
           className={styles.portalRevealPhoto}
           ref={portalGalleryRef}
-          src="/assets/gallery-corridor-frame1.jfif"
+          src="/assets/gallery-lobby.jpg"
           alt=""
         />
       </div>
