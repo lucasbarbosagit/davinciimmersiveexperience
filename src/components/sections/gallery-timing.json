@@ -1,0 +1,17 @@
+{
+  "fps": 24,
+  "frames": 371,
+  "lobbyHoldEnd": 25,
+  "doorFrame": 126,
+  "stops": [
+    [
+      126,
+      169
+    ],
+    [
+      222,
+      265
+    ]
+  ],
+  "exitFrame": 318
+}

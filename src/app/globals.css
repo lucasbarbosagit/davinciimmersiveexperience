@@ -1,0 +1,32 @@
+@import "tailwindcss";
+
+:root {
+  --gold: #c9a24b;
+  --gold-soft: #d9bc7a;
+  --ink: #0a0906;
+  --cream: #f5efe0;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  background: var(--ink);
+}
+
+body {
+  font-family: var(--font-sans), sans-serif;
+  color: var(--cream);
+  overflow-x: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}

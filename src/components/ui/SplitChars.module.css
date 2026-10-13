@@ -1,0 +1,15 @@
+.word {
+  /* a máscara: a letra nasce abaixo desta borda e sobe pra dentro dela.
+     A folga embaixo (padding + margem negativa) é pra não cortar as
+     descendentes (g, p, ç) quando a letra já está no lugar */
+  display: inline-block;
+  overflow: hidden;
+  vertical-align: top;
+  padding-bottom: 0.14em;
+  margin-bottom: -0.14em;
+}
+
+.char {
+  display: inline-block;
+  will-change: transform;
+}

@@ -1,0 +1,72 @@
+.loader {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  grid-template-rows: 1fr auto 1fr;
+  justify-items: center;
+  align-items: center;
+  background: var(--ink);
+  color: var(--cream);
+  clip-path: inset(0% 0% 0% 0%);
+}
+
+.brand {
+  align-self: start;
+  margin-top: 6vh;
+  font-family: var(--font-sans), sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: var(--gold-soft);
+}
+
+.numWrap {
+  /* a perspectiva faz o giro ler como folha virando */
+  perspective: 1400px;
+}
+
+.flip {
+  /* espelhado: o verso visível de um giro de 180° */
+  transform: rotateY(180deg);
+  backface-visibility: visible;
+  font-family: var(--font-display), serif;
+  font-size: clamp(120px, 19vw, 320px);
+  line-height: 0.85;
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+  color: var(--cream);
+  will-change: transform;
+}
+
+.foot {
+  align-self: end;
+  margin-bottom: 8vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.line {
+  display: block;
+  width: min(220px, 50vw);
+  height: 1px;
+  background: rgba(245, 239, 224, 0.14);
+}
+
+.lineFill {
+  display: block;
+  height: 100%;
+  background: var(--gold);
+  transform: scaleX(0);
+  transform-origin: 0 50%;
+}
+
+.caption {
+  font-family: var(--font-display), serif;
+  font-style: italic;
+  font-size: 17px;
+  color: rgba(245, 239, 224, 0.62);
+}

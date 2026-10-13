@@ -1,0 +1,304 @@
+.timelineSection {
+  position: relative;
+  height: 100vh;
+  overflow: hidden;
+  background: var(--ink);
+  color: var(--cream);
+  /* o conteúdo que sai pela esquerda se apaga antes de passar por baixo
+     do menu lateral fixo (que fica fora da seção, então não é afetado) */
+  -webkit-mask-image: linear-gradient(90deg, transparent 240px, #000 340px);
+  mask-image: linear-gradient(90deg, transparent 240px, #000 340px);
+}
+
+.track {
+  /* uma fileira só, mais larga que a tela; o JS desliza ela pra esquerda */
+  display: flex;
+  height: 100%;
+  width: max-content;
+  will-change: transform;
+}
+
+/* ---------- abertura ---------- */
+
+.intro {
+  flex: 0 0 auto;
+  width: 64vw;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  /* depois do menu lateral fixo (e da faixa onde a máscara apaga) */
+  padding-left: max(6vw, 350px);
+  padding-right: 4vw;
+}
+
+.eyebrow {
+  display: block;
+  font-family: var(--font-sans), sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--gold-soft);
+}
+
+.introTitle {
+  margin: 24px 0 30px;
+  font-family: var(--font-display), serif;
+  font-weight: 400;
+  font-size: clamp(64px, 8.4vw, 168px);
+  line-height: 0.88;
+  letter-spacing: -0.025em;
+}
+
+.introTitle em {
+  display: block;
+  margin-top: 0.12em;
+  font-size: 0.42em;
+  font-style: italic;
+  letter-spacing: -0.01em;
+  color: var(--gold-soft);
+}
+
+.lead {
+  max-width: 40ch;
+  font-family: var(--font-sans), sans-serif;
+  font-size: 15px;
+  line-height: 1.65;
+  color: rgba(245, 239, 224, 0.8);
+}
+
+.hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 36px;
+  font-family: var(--font-sans), sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: rgba(245, 239, 224, 0.6);
+}
+
+.hintLine {
+  width: 64px;
+  height: 1px;
+  background: var(--gold);
+}
+
+/* ---------- capítulos ---------- */
+
+.chapter {
+  position: relative;
+  flex: 0 0 auto;
+  height: 100%;
+  display: grid;
+  align-items: center;
+  column-gap: 4vw;
+  padding: 0 5vw;
+}
+
+.chapterWide {
+  /* obra horizontal: imagem larga em cima, texto ao lado embaixo */
+  width: 82vw;
+  grid-template-columns: 1.55fr 1fr;
+}
+
+.chapterTall {
+  /* obra vertical: imagem alta e estreita, texto ao lado */
+  width: 66vw;
+  grid-template-columns: auto 1fr;
+}
+
+.year {
+  /* o ano em contorno, atrás de tudo — a "marca d'água" do capítulo */
+  position: absolute;
+  left: 2vw;
+  bottom: 4vh;
+  font-family: var(--font-display), serif;
+  font-size: clamp(160px, 24vw, 420px);
+  line-height: 0.8;
+  letter-spacing: -0.04em;
+  color: transparent;
+  -webkit-text-stroke: 1px rgba(217, 188, 122, 0.22);
+  pointer-events: none;
+  user-select: none;
+  will-change: transform;
+}
+
+.media {
+  position: relative;
+  margin: 0;
+  z-index: 1;
+}
+
+.mediaClip {
+  overflow: hidden;
+  will-change: clip-path;
+}
+
+.mediaClip img {
+  display: block;
+  will-change: transform;
+}
+
+.chapterWide .mediaClip img {
+  width: 100%;
+  height: auto;
+  max-height: 58vh;
+  object-fit: cover;
+}
+
+.chapterTall .mediaClip img {
+  height: 64vh;
+  width: auto;
+  max-width: 34vw;
+  object-fit: cover;
+}
+
+.caption {
+  margin-top: 14px;
+  max-width: 46ch;
+  font-family: var(--font-sans), sans-serif;
+  font-size: 11px;
+  line-height: 1.5;
+  color: rgba(245, 239, 224, 0.45);
+}
+
+.text {
+  position: relative;
+  z-index: 1;
+  max-width: 420px;
+}
+
+.chapterTitle {
+  margin: 18px 0 22px;
+  font-family: var(--font-display), serif;
+  font-weight: 400;
+  font-size: clamp(38px, 3.6vw, 68px);
+  line-height: 0.98;
+  letter-spacing: -0.015em;
+}
+
+.chapterText {
+  font-family: var(--font-sans), sans-serif;
+  font-size: 15px;
+  line-height: 1.65;
+  color: rgba(245, 239, 224, 0.82);
+}
+
+/* ---------- trilho: em que cidade você está ---------- */
+
+.rail {
+  position: absolute;
+  left: max(6vw, 350px);
+  right: 6vw;
+  bottom: 5vh;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.railLine {
+  height: 1px;
+  background: rgba(245, 239, 224, 0.14);
+}
+
+.railFill {
+  height: 100%;
+  background: var(--gold);
+  transform: scaleX(0);
+  transform-origin: 0 50%;
+}
+
+.railStops {
+  display: flex;
+  justify-content: space-between;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+  font-family: var(--font-sans), sans-serif;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(245, 239, 224, 0.55);
+}
+
+.railStops li {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.railYear {
+  letter-spacing: 0.08em;
+  color: rgba(245, 239, 224, 0.3);
+}
+
+/* ---------- sem movimento: coluna vertical comum ---------- */
+
+.timelineSection[data-reduced] {
+  height: auto;
+}
+
+.timelineSection[data-reduced] .track {
+  flex-direction: column;
+  width: auto;
+}
+
+.timelineSection[data-reduced] .intro,
+.timelineSection[data-reduced] .chapter {
+  width: auto;
+  height: auto;
+  min-height: 0;
+  padding-top: 12vh;
+  padding-bottom: 4vh;
+}
+
+.timelineSection[data-reduced] .rail {
+  display: none;
+}
+
+@media (max-width: 880px) {
+  .timelineSection {
+    /* sem menu lateral no celular: nada a esconder */
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+
+  .intro {
+    width: 100vw;
+    padding: 0 20px;
+  }
+
+  .chapterWide,
+  .chapterTall {
+    width: 92vw;
+    grid-template-columns: 1fr;
+    align-content: center;
+    row-gap: 22px;
+    padding: 0 20px;
+  }
+
+  .chapterTall .mediaClip img {
+    height: 42vh;
+    max-width: 100%;
+  }
+
+  .chapterWide .mediaClip img {
+    max-height: 32vh;
+  }
+
+  .chapterText {
+    font-size: 14px;
+  }
+
+  .rail {
+    left: 20px;
+    right: 20px;
+  }
+
+  .railYear {
+    display: none;
+  }
+}

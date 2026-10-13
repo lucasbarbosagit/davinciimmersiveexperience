@@ -1,0 +1,119 @@
+.footer {
+  position: relative;
+  overflow: hidden;
+  /* depois do menu lateral fixo */
+  padding: 14vh 6vw 4vh max(6vw, 300px);
+  background: var(--ink);
+  color: var(--cream);
+  border-top: 1px solid rgba(217, 188, 122, 0.18);
+}
+
+.columns {
+  display: grid;
+  grid-template-columns: 1.6fr 0.8fr 1fr 1fr;
+  gap: 4vw;
+  align-items: start;
+}
+
+.tagline {
+  max-width: 22ch;
+  font-family: var(--font-display), serif;
+  font-size: clamp(26px, 2.4vw, 40px);
+  line-height: 1.12;
+}
+
+.tagline em {
+  font-style: italic;
+  color: var(--gold-soft);
+}
+
+.col {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-family: var(--font-sans), sans-serif;
+  font-size: 14px;
+  line-height: 1.55;
+  color: rgba(245, 239, 224, 0.72);
+}
+
+.col p {
+  margin: 0;
+}
+
+.colLabel {
+  margin-bottom: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--gold-soft);
+}
+
+.col a,
+.bottom a {
+  color: inherit;
+  text-decoration: none;
+  width: fit-content;
+  background: linear-gradient(var(--gold), var(--gold)) 0 100% / 0 1px no-repeat;
+  transition: background-size 0.5s cubic-bezier(0.19, 1, 0.22, 1), color 0.3s ease;
+}
+
+.col a:hover,
+.bottom a:hover {
+  color: var(--cream);
+  background-size: 100% 1px;
+}
+
+.wordmarkWrap {
+  /* a perspectiva é o que faz o giro ler como uma folha virando, não
+     como um encolhe-e-estica */
+  margin: 10vh 0 3vh;
+  perspective: 1600px;
+  text-align: center;
+}
+
+.wordmark {
+  display: inline-block;
+  font-family: var(--font-display), serif;
+  font-size: clamp(90px, 19vw, 360px);
+  line-height: 0.82;
+  letter-spacing: -0.04em;
+  color: var(--cream);
+  /* o verso aparece espelhado (é o que dá a escrita invertida) */
+  backface-visibility: visible;
+  transform: rotateY(180deg);
+  will-change: transform;
+}
+
+.bottom {
+  display: flex;
+  justify-content: space-between;
+  padding-top: 18px;
+  border-top: 1px solid rgba(245, 239, 224, 0.12);
+  font-family: var(--font-sans), sans-serif;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(245, 239, 224, 0.45);
+}
+
+@media (max-width: 880px) {
+  .footer {
+    padding: 12vh 20px 4vh;
+  }
+
+  .columns {
+    grid-template-columns: 1fr 1fr;
+    row-gap: 8vh;
+  }
+
+  .tagline {
+    grid-column: 1 / -1;
+  }
+
+  .bottom {
+    flex-direction: column;
+    gap: 10px;
+  }
+}

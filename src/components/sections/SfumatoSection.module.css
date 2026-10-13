@@ -1,0 +1,259 @@
+.sfumato {
+  /* mais alto que a tela: o palco fica preso (sticky) por um tempo,
+     o bastante pra pintar sem precisar de pin do ScrollTrigger */
+  position: relative;
+  height: 180vh;
+  background: var(--ink);
+  color: var(--cream);
+}
+
+.stage {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+}
+
+.word {
+  /* a palavra gigante em contorno atrás do quadro — a mesma linguagem
+     dos anos da linha do tempo */
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  font-family: var(--font-display), serif;
+  font-size: clamp(120px, 24vw, 460px);
+  line-height: 1;
+  letter-spacing: -0.04em;
+  white-space: nowrap;
+  color: transparent;
+  -webkit-text-stroke: 1px rgba(217, 188, 122, 0.2);
+  pointer-events: none;
+  user-select: none;
+}
+
+.frame {
+  position: relative;
+  height: min(78vh, 760px);
+  aspect-ratio: 2 / 3;
+  overflow: hidden;
+  /* o painel antes da tinta */
+  background: #1c150e;
+  box-shadow:
+    0 0 0 1px rgba(217, 188, 122, 0.22),
+    0 40px 120px rgba(0, 0, 0, 0.6);
+  cursor: none;
+  /* um pouco à direita do centro: à esquerda está o menu lateral */
+  transform: translateX(4vw);
+  /* arrasto vertical continua sendo scroll no toque; o resto pinta */
+  touch-action: pan-y;
+}
+
+.under {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: blur(22px) brightness(0.32) saturate(0.6);
+  transform: scale(1.08);
+}
+
+.canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.brush {
+  /* o pincel: um anel fino no lugar do cursor */
+  position: absolute;
+  left: -22px;
+  top: -22px;
+  width: 44px;
+  height: 44px;
+  border: 1px solid rgba(245, 239, 224, 0.75);
+  border-radius: 50%;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
+.frame[data-brush] .brush {
+  opacity: 1;
+}
+
+.copy {
+  position: absolute;
+  left: max(6vw, 300px);
+  bottom: 9vh;
+  width: min(17vw, 280px);
+}
+
+.eyebrow {
+  display: block;
+  font-family: var(--font-sans), sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--gold-soft);
+}
+
+.title {
+  margin: 18px 0 18px;
+  font-family: var(--font-display), serif;
+  font-weight: 400;
+  font-size: clamp(36px, 3.1vw, 58px);
+  line-height: 0.95;
+  letter-spacing: -0.015em;
+}
+
+.title em {
+  display: block;
+  font-style: italic;
+  color: var(--gold-soft);
+}
+
+.lead {
+  font-family: var(--font-sans), sans-serif;
+  font-size: 13px;
+  line-height: 1.65;
+  color: rgba(245, 239, 224, 0.78);
+}
+
+.side {
+  position: absolute;
+  right: 6vw;
+  bottom: 9vh;
+  width: min(22vw, 300px);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 18px;
+  text-align: right;
+}
+
+.count {
+  font-family: var(--font-display), serif;
+  font-size: clamp(64px, 7vw, 128px);
+  line-height: 0.85;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+
+.count small {
+  font-size: 0.32em;
+  color: var(--gold-soft);
+  margin-left: 4px;
+}
+
+.hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  font-family: var(--font-sans), sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: rgba(245, 239, 224, 0.6);
+}
+
+.hintLine {
+  width: 44px;
+  height: 1px;
+  background: var(--gold);
+}
+
+.hintTouch {
+  display: none;
+}
+
+@media (pointer: coarse) {
+  .hintDesk {
+    display: none;
+  }
+  .hintTouch {
+    display: inline;
+  }
+}
+
+.caption {
+  font-family: var(--font-sans), sans-serif;
+  font-size: 13px;
+  line-height: 1.6;
+  color: rgba(245, 239, 224, 0.7);
+}
+
+.again {
+  padding: 12px 20px;
+  border: 1px solid rgba(217, 188, 122, 0.5);
+  background: transparent;
+  color: var(--cream);
+  font-family: var(--font-sans), sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition:
+    background 0.4s ease,
+    color 0.4s ease;
+}
+
+.again:hover {
+  background: var(--gold);
+  color: var(--ink);
+}
+
+@media (max-width: 1100px) {
+  .lead {
+    display: none;
+  }
+}
+
+@media (max-width: 880px) {
+  .stage {
+    place-items: start center;
+    padding-top: 9vh;
+  }
+
+  .frame {
+    height: 56vh;
+    transform: none;
+  }
+
+  .copy {
+    left: 20px;
+    right: 40%;
+    width: auto;
+    bottom: 6vh;
+  }
+
+  .title {
+    font-size: 9vw;
+    margin: 12px 0 0;
+  }
+
+  .side {
+    right: 20px;
+    bottom: 6vh;
+    width: 36%;
+  }
+
+  .count {
+    font-size: 14vw;
+  }
+
+  .hint {
+    letter-spacing: 0.18em;
+  }
+
+  .hintLine {
+    display: none;
+  }
+}

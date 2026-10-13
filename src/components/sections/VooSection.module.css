@@ -1,0 +1,185 @@
+.vooSection {
+  position: relative;
+  height: 100vh;
+  overflow: hidden;
+  /* o mesmo preto do fim da galeria e do clear do WebGL */
+  background: var(--ink);
+}
+
+.vooSection[data-overlap] {
+  /* sobe por cima da última tela da galeria (o trecho escuro da saída):
+     o pin daqui começa exatamente quando o da galeria termina. Enquanto
+     sobe, o canvas fica parado na tela (JS) — por isso sem fundo e sem
+     overflow hidden: ele precisa poder ficar acima da borda da seção */
+  margin-top: -100vh;
+  overflow: visible;
+  background: transparent;
+}
+
+.canvasWrap {
+  position: absolute;
+  inset: 0;
+  cursor: grab;
+  /* arrasto vertical continua sendo scroll; só o horizontal gira */
+  touch-action: pan-y;
+}
+
+.canvasWrap[data-dragging] {
+  cursor: grabbing;
+}
+
+.canvasWrap canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.intro {
+  /* a legenda que acompanha o traço se desenhando, no centro-baixo —
+     como a anotação embaixo de um desenho de códice */
+  position: absolute;
+  left: 50%;
+  bottom: 14vh;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  font-family: var(--font-display), serif;
+  font-style: italic;
+  font-size: clamp(18px, 1.6vw, 26px);
+  color: rgba(245, 239, 224, 0.82);
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.introYear {
+  font-family: var(--font-sans), sans-serif;
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--gold-soft);
+}
+
+.copy {
+  /* começa depois do menu lateral fixo (que a esta altura da página já
+     está visível, ao contrário da galeria, onde ele fica escondido) */
+  position: absolute;
+  left: max(6vw, 300px);
+  top: 50%;
+  transform: translateY(-50%);
+  width: min(32vw, 460px);
+  pointer-events: none;
+  color: var(--cream);
+}
+
+.copyRight {
+  /* do homem vitruviano em diante o objeto fica à esquerda */
+  left: auto;
+  right: 6vw;
+}
+
+.eyebrow {
+  display: block;
+  font-family: var(--font-sans), sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--gold-soft);
+}
+
+.title {
+  margin: 22px 0 28px;
+  font-family: var(--font-display), serif;
+  font-weight: 400;
+  font-size: clamp(60px, 7.4vw, 140px);
+  line-height: 0.9;
+  letter-spacing: -0.02em;
+}
+
+.title em {
+  /* "ao voo" sempre na segunda linha: a quebra é parte da frase */
+  display: block;
+  font-style: italic;
+  color: var(--gold-soft);
+}
+
+.lead {
+  max-width: 38ch;
+  font-family: var(--font-sans), sans-serif;
+  font-size: 15px;
+  line-height: 1.65;
+  color: rgba(245, 239, 224, 0.82);
+}
+
+.hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 34px;
+  font-family: var(--font-sans), sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: rgba(245, 239, 224, 0.6);
+}
+
+.hintLine {
+  width: 44px;
+  height: 1px;
+  background: var(--gold);
+}
+
+.credit {
+  position: absolute;
+  right: 24px;
+  bottom: 18px;
+  font-family: var(--font-sans), sans-serif;
+  font-size: 11px;
+  color: rgba(245, 239, 224, 0.38);
+}
+
+.credit a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.credit a:hover {
+  color: var(--gold-soft);
+}
+
+@media (max-width: 880px) {
+  /* sem terço lateral livre: a máquina fica no centro e o texto desce
+     pro rodapé, sem o parágrafo */
+  .copy,
+  .copyRight {
+    left: 20px;
+    right: 20px;
+    top: auto;
+    bottom: 9vh;
+    width: auto;
+    transform: none;
+  }
+
+  .title {
+    font-size: 15vw;
+    margin: 14px 0 16px;
+  }
+
+  .lead {
+    display: none;
+  }
+
+  .hint {
+    margin-top: 6px;
+  }
+
+  .intro {
+    bottom: 22vh;
+  }
+}

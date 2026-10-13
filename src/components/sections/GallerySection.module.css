@@ -1,0 +1,272 @@
+.galleryPin {
+  height: 100vh;
+  position: relative;
+  overflow: hidden;
+  background: #0a0a0c;
+}
+
+.galleryStage {
+  position: absolute;
+  inset: 0;
+  /* leve margem de segurança: o Ken Burns (scale até 1.14 + pan lateral)
+     não pode deixar borda vazia aparecer, então cada slide nasce maior
+     que a viewport — overflow:hidden aqui corta o excesso */
+  overflow: hidden;
+}
+
+.slide {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  will-change: transform, opacity;
+}
+
+.slideImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.coverBox {
+  /* a mesma caixa que o <video> ocupa em object-fit: cover (16:9 cobrindo
+     a tela, centrado, excesso cortado): o que fica dentro dela acompanha
+     a imagem do render em qualquer proporção de viewport */
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: max(100%, 100vh * 16 / 9);
+  aspect-ratio: 16 / 9;
+  min-height: 100%;
+  transform: translate(-50%, -50%);
+  container-type: size;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.lobbyTitle {
+  /* no vão de concreto entre os painéis do alto e a porta do saguão
+     (~41%..49% da altura do frame 1) — o texto ocupa a parede, como
+     sinalização de museu, não um título flutuando por cima da cena */
+  position: absolute;
+  left: 50%;
+  top: 44.5%;
+  width: 100%;
+  transform: translate3d(-50%, -50%, 0);
+  transform-origin: 50% 50%;
+  text-align: center;
+  opacity: 0;
+  will-change: transform, opacity;
+}
+
+.lobbyTitle::before {
+  /* penumbra atrás do título, no lugar de text-shadow: a máscara de cada
+     palavra (SplitChars) cortaria a sombra borrada em retângulos */
+  content: "";
+  position: absolute;
+  inset: -55% -8%;
+  z-index: -1;
+  background: radial-gradient(ellipse 50% 50% at 50% 50%, rgba(8, 6, 4, 0.62), rgba(8, 6, 4, 0) 72%);
+}
+
+.lobbyTitle h2 {
+  font-family: var(--font-display), serif;
+  font-weight: 400;
+  font-size: 4.3cqw;
+  line-height: 1;
+  letter-spacing: -0.01em;
+  color: var(--cream);
+}
+
+.lobbyTitle h2 em {
+  /* o meio-tom da frase em itálico: o contraste de estilo dentro da
+     mesma família é o que dá o ar editorial, não peso ou caixa-alta */
+  font-style: italic;
+  color: var(--gold-soft);
+}
+
+.lobbyTitle p {
+  margin-top: 1.1cqw;
+  font-family: var(--font-sans), sans-serif;
+  font-size: 0.78cqw;
+  font-weight: 500;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: rgba(245, 239, 224, 0.72);
+  opacity: 0;
+}
+
+.inkFade {
+  /* o fim do render é quase preto; isto completa até o tom exato do
+     fundo da página, pra a seção seguinte nascer do mesmo escuro */
+  position: absolute;
+  inset: 0;
+  background: var(--ink);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 4;
+}
+
+.galleryScrim {
+  /* vinheta leve pra legibilidade das legendas sem lavar o contraste do
+     corredor — mais forte nas bordas, quase nula no centro da tela */
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(6, 5, 3, 0) 45%,
+    rgba(6, 5, 3, 0.55) 100%
+  );
+  pointer-events: none;
+  opacity: 0;
+  z-index: 1;
+}
+
+.caption {
+  /* tipografia direto sobre a cena, sem cartão: título grande no terço
+     esquerdo, que fica livre em todas as paradas (a obra está no centro e
+     o orbe à direita). O texto não persegue a obra — é a câmera que vai
+     até ela. Visível sempre; quem esconde/revela é a timeline (JS) */
+  position: absolute;
+  left: 6vw;
+  top: 50%;
+  transform: translateY(-46%);
+  width: min(30vw, 440px);
+  z-index: 3;
+  pointer-events: none;
+  color: var(--cream);
+}
+
+.caption::before {
+  /* penumbra à esquerda pra o texto ler sobre as ripas iluminadas do
+     corredor, sem text-shadow (a máscara das letras cortaria a sombra) */
+  content: "";
+  position: absolute;
+  inset: -40% -60% -40% -30%;
+  z-index: -1;
+  background: radial-gradient(ellipse 55% 50% at 35% 50%, rgba(4, 4, 6, 0.7), rgba(4, 4, 6, 0) 75%);
+}
+
+.captionIndex {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-family: var(--font-sans), sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--gold-soft);
+}
+
+.captionTotal {
+  color: rgba(245, 239, 224, 0.4);
+}
+
+.captionRule {
+  flex: 0 0 56px;
+  height: 1px;
+  background: var(--gold);
+  transform-origin: 0 50%;
+}
+
+.captionTitle {
+  margin: 22px 0 26px;
+  font-family: var(--font-display), serif;
+  font-weight: 400;
+  font-size: clamp(54px, 6.4vw, 124px);
+  line-height: 0.92;
+  letter-spacing: -0.02em;
+}
+
+.captionMeta {
+  font-family: var(--font-sans), sans-serif;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  color: rgba(245, 239, 224, 0.55);
+  margin-bottom: 14px;
+}
+
+.captionDesc {
+  max-width: 34ch;
+  font-family: var(--font-sans), sans-serif;
+  font-size: 15px;
+  line-height: 1.6;
+  color: rgba(245, 239, 224, 0.86);
+}
+
+@media (max-width: 880px) {
+  /* tela estreita: a obra ocupa o meio e não sobra terço lateral — a
+     legenda desce pro rodapé, sem o parágrafo, só o essencial */
+  .caption {
+    left: 20px;
+    right: 20px;
+    top: auto;
+    bottom: 7vh;
+    width: auto;
+    transform: none;
+  }
+
+  .captionTitle {
+    font-size: 13vw;
+    margin: 14px 0 12px;
+  }
+
+  .captionDesc {
+    display: none;
+  }
+}
+
+.galleryFallback {
+  /* sob prefers-reduced-motion: sem WebGL, sem pin — só uma grade estática
+     das mesmas quatro obras, na mesma ordem da caminhada */
+  padding: 14vh 8vw 10vh;
+  background: var(--ink);
+}
+
+.fallbackEyebrow {
+  font-size: 12px;
+  letter-spacing: 2px;
+  color: var(--gold-soft);
+  text-transform: uppercase;
+  display: block;
+  margin-bottom: 16px;
+}
+
+.galleryFallback h2 {
+  font-family: var(--font-serif), serif;
+  font-weight: 500;
+  font-size: clamp(30px, 4.6vw, 56px);
+  color: var(--cream);
+  margin-bottom: 8vh;
+}
+
+.fallbackGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 40px;
+}
+
+.fallbackItem img {
+  width: 100%;
+  height: 260px;
+  object-fit: cover;
+  border: 1px solid rgba(201, 162, 75, 0.3);
+}
+
+.fallbackItem figcaption {
+  margin-top: 14px;
+}
+
+.fallbackItem strong {
+  display: block;
+  font-family: var(--font-serif), serif;
+  font-weight: 500;
+  font-size: 20px;
+  color: var(--cream);
+}
+
+.fallbackItem span {
+  font-size: 13px;
+  color: #a89a76;
+}
